@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Grid, Paper, Card, CardContent, Button } from '@mui/material';
+import { Box, Typography, Grid, Paper, Card, CardContent, Button, Chip } from '@mui/material';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { PlayCircleOutline as PlayIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -160,13 +160,22 @@ export const Dashboard: React.FC = () => {
                     {chapterStats.map((stat, idx) => (
                         <Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
                             <Box sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                    <Typography variant="body2" noWrap sx={{ maxWidth: '80%' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                                    <Typography variant="body2" noWrap sx={{ maxWidth: '75%', fontWeight: 500 }}>
                                         {stat.title}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {stat.completed}/{stat.total}
-                                    </Typography>
+                                    <Chip 
+                                        label={`${stat.completed}/${stat.total}`} 
+                                        size="small" 
+                                        variant="outlined"
+                                        sx={{ 
+                                            height: 24, 
+                                            fontSize: '0.85rem', 
+                                            fontWeight: 'bold',
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            color: 'text.secondary'
+                                        }}
+                                    />
                                 </Box>
                                 <Box sx={{ w: '100%', height: 4, bgcolor: '#1f2937', borderRadius: 2, overflow: 'hidden' }}>
                                     <Box 

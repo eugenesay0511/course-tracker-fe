@@ -117,7 +117,27 @@ export const CourseOutline: React.FC<CourseOutlineProps> = ({ data, activeVideoI
   };
 
   return (
-    <Box sx={{ width: '100%', height: '100%', overflowY: 'auto', bgcolor: 'background.paper' }}>
+    <Box sx={{ 
+      width: '100%', 
+      height: '100%', 
+      overflowY: 'auto', 
+      bgcolor: 'background.paper',
+      '&::-webkit-scrollbar': {
+        width: '6px',
+      },
+      '&::-webkit-scrollbar-track': {
+        bgcolor: 'transparent',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        bgcolor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '10px',
+        '&:hover': {
+          bgcolor: 'rgba(255, 255, 255, 0.2)',
+        },
+      },
+      scrollbarWidth: 'thin',
+      scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent',
+    }}>
       <Typography variant="h6" sx={{ p: 2, borderBottom: '1px solid #1f2937', fontWeight: 'bold' }}>
         Course Outline
       </Typography>

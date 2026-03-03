@@ -19,8 +19,8 @@ export const CoursePlayer: React.FC = () => {
   } = useCourseProgress() as any;
   
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string>('');
-  const [resolvedSubtitleSrc, setResolvedSubtitleSrc] = useState<string>('');
+  const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string | null>(null);
+  const [resolvedSubtitleSrc, setResolvedSubtitleSrc] = useState<string | null>(null);
 
   const videoRootPath = progress.settings?.videoRootPath || '';
 
@@ -46,8 +46,8 @@ export const CoursePlayer: React.FC = () => {
   useEffect(() => {
     const resolveUrls = async () => {
       if (!activeVideo) {
-        setResolvedVideoSrc('');
-        setResolvedSubtitleSrc('');
+        setResolvedVideoSrc(null);
+        setResolvedSubtitleSrc(null);
         return;
       }
 
@@ -73,7 +73,7 @@ export const CoursePlayer: React.FC = () => {
             const sUrl = await resolveFile(activeVideo.srtPath);
             setResolvedSubtitleSrc(sUrl);
           } else {
-            setResolvedSubtitleSrc('');
+            setResolvedSubtitleSrc(null);
           }
           
           return () => {
@@ -83,12 +83,12 @@ export const CoursePlayer: React.FC = () => {
           console.error("Failed to resolve file handles:", err);
           // Fallback to @fs if handle resolution fails
           setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
-          setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : '');
+          setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : null);
         }
       } else {
         // Localhost dev mode fallback or permission not granted yet
         setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
-        setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : '');
+        setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : null);
       }
     };
 
