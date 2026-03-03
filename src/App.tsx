@@ -77,7 +77,7 @@ function App() {
             <Toolbar>
               <SchoolIcon sx={{ mr: 2 }} />
               <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                TypeScript Course Tracker
+                Course Tracker
               </Typography>
               <Navigation />
             </Toolbar>

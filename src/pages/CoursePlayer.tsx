@@ -9,7 +9,7 @@ export const CoursePlayer: React.FC = () => {
   const { progress, courseData, updateVideoProgress, getProgress, markVideoUncompleted } = useCourseProgress() as any;
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
 
-  const videoRootPath = progress.settings?.videoRootPath || 'c:/Users/YJ/Desktop/Typescript Course/Udemy - Understanding TypeScript (2026-1)';
+  const videoRootPath = progress.settings?.videoRootPath || '';
 
   // Initialize active video from last watched, or the first video of the course
   useEffect(() => {

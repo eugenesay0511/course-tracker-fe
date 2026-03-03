@@ -17,7 +17,7 @@ export interface CourseProgressState {
 
 const STORAGE_KEY = 'typescript_course_progress';
 const DATA_STORAGE_KEY = 'typescript_course_data';
-const DEFAULT_ROOT_PATH = 'c:/Users/YJ/Desktop/Typescript Course/Udemy - Understanding TypeScript (2026-1)';
+const DEFAULT_ROOT_PATH = '';
 
 const loadProgress = (): CourseProgressState => {
   try {

@@ -72,7 +72,7 @@ export const Settings: React.FC = () => {
           </Tooltip>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Point this to the folder containing your chapters (e.g., "Udemy - Understanding TypeScript").
+          Point this to the folder containing your chapters (e.g., "C:/Courses/My-Full-Course").
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <TextField
