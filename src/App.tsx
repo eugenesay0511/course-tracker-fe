@@ -77,12 +77,15 @@ function App() {
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
             
             <AppBar position="static" elevation={1}>
-              <Toolbar>
-                <SchoolIcon sx={{ mr: 2 }} />
-                <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                  Course Tracker
-                </Typography>
+              <Toolbar sx={{ justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <SchoolIcon sx={{ mr: 2 }} />
+                  <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                    Course Tracker
+                  </Typography>
+                </Box>
                 <Navigation />
+                <Box sx={{ flex: 1 }} />
               </Toolbar>
             </AppBar>
 

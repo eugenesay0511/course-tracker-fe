@@ -31,10 +31,12 @@ export const Settings: React.FC = () => {
     // Remote surrounding quotes if pasted (e.g. "C:\Path" -> C:\Path)
     pathToSave = pathToSave.replace(/^["']|["']$/g, '');
 
-    if (!pathToSave) {
-      setError("Path cannot be empty");
+    // Allow empty path ONLY if we are providing a new handle/data from scanning
+    if (!pathToSave && !newCourseData) {
+      setError("Please provide a path or use 'Select Folder'");
       return;
     }
+
     setVideoRootPath(pathToSave);
     if (newCourseData) {
         setCourseData(newCourseData);
@@ -69,7 +71,7 @@ export const Settings: React.FC = () => {
           
           // Try to reconstruct the path if the user has already typed something in
           const currentVal = rootPath.trim();
-          let newPath = folderName;
+          let newPath = currentVal ? currentVal : folderName;
           
           if (currentVal) {
             // Remove existing quotes if any
@@ -108,12 +110,12 @@ export const Settings: React.FC = () => {
       <Paper sx={{ p: 3, mb: 4, border: '1px solid #1f2937' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
           <Typography variant="h6">Course Location</Typography>
-          <Tooltip title="This is the absolute path to your video files on your computer.">
+          <Tooltip title="This is the folder where your course videos are stored.">
             <IconButton size="small"><InfoIcon fontSize="small" /></IconButton>
           </Tooltip>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Step 1: Paste full path. Step 2: Click "Save & Scan" and select the folder.
+          Step 1 (Optional): Paste full path. Step 2: Click "Select Folder" and select the folder.
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <TextField
@@ -124,7 +126,7 @@ export const Settings: React.FC = () => {
             value={rootPath}
             onChange={(e) => setRootPath(e.target.value)}
             error={!!error}
-            helperText={error || "Tip: Paste your path here first to help the app reconstruct the full absolute path."}
+            helperText={error || "Tip: Providing the absolute path is optional, but helpful for local dev."}
           />
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button 
@@ -132,12 +134,12 @@ export const Settings: React.FC = () => {
               onClick={handleBrowseAndScan}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              Save & Scan
+              Select Folder
             </Button>
           </Box>
         </Box>
         <Alert severity="info" sx={{ mt: 3, bgcolor: 'rgba(59, 130, 246, 0.05)', color: 'primary.light', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-          For security reasons, you must provide the <b>full absolute path</b> and manually <b>select the folder</b> to grant permission for the app to scan and list your files.
+          For security reasons, you must manually <b>select the folder</b> to grant permission. Providing the <b>full absolute path</b> is optional but recommended.
         </Alert>
       </Paper>
 

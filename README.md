@@ -68,7 +68,8 @@ npm run dev
 3. **Configure Your Course**
    - Open `http://localhost:5173`.
    - Navigate to the **Settings** page.
-   - Click **Save & Scan** and select the root directory of your video course on your computer.
+   - Click **Select Folder** and select the root directory of your video course on your computer.
+   - _(Optional)_ You can also paste your absolute folder path into the text field, but it is no longer required for playback.
    - Go to the **Course Player** and start learning!
 
 ## 📦 Tech Stack
