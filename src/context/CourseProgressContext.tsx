@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import staticCourseData from '../data/course-data.json';
+import { getStoredHandle, setStoredHandle } from '../utils/idb';
 
 export interface VideoProgress {
   currentTime: number;
@@ -19,12 +20,14 @@ interface CourseProgressContextType {
   progress: CourseProgressState;
   courseData: any[];
   rootHandle: FileSystemDirectoryHandle | null;
+  permissionStatus: PermissionState | null;
   updateVideoProgress: (videoId: string, currentTime: number, duration: number) => void;
   markVideoCompleted: (videoId: string) => void;
   markVideoUncompleted: (videoId: string) => void;
   setVideoRootPath: (path: string) => void;
   setCourseData: (data: any[]) => void;
   setRootHandle: (handle: FileSystemDirectoryHandle | null) => void;
+  requestPermission: () => Promise<boolean>;
   exportProgress: () => void;
   importProgress: (jsonString: string) => boolean;
   getProgress: (videoId: string) => VideoProgress | undefined;
@@ -86,6 +89,7 @@ export const CourseProgressProvider: React.FC<{ children: React.ReactNode }> = (
   const [progress, setProgress] = useState<CourseProgressState>(loadProgress);
   const [courseData, setCourseDataState] = useState<any[]>(loadCourseData);
   const [rootHandle, setRootHandleState] = useState<FileSystemDirectoryHandle | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
@@ -94,6 +98,21 @@ export const CourseProgressProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(courseData));
   }, [courseData]);
+
+  // Load handle from IndexedDB on mount
+  useEffect(() => {
+    const initHandle = async () => {
+      const handle = await getStoredHandle();
+      if (handle) {
+        setRootHandleState(handle);
+        // Check permission status
+        // @ts-ignore
+        const status = await handle.queryPermission({ mode: 'read' });
+        setPermissionStatus(status);
+      }
+    };
+    initHandle();
+  }, []);
 
   const updateVideoProgress = useCallback((videoId: string, currentTime: number, duration: number) => {
     setProgress(prev => {
@@ -150,7 +169,27 @@ export const CourseProgressProvider: React.FC<{ children: React.ReactNode }> = (
 
   const setRootHandle = useCallback((handle: FileSystemDirectoryHandle | null) => {
     setRootHandleState(handle);
+    if (handle) {
+      setStoredHandle(handle).catch(err => console.error("Failed to store handle in IDB:", err));
+      setPermissionStatus('granted');
+    } else {
+      // Clear persistence if handle is cleared (e.g. error or reset)
+      // Note: We don't have a clearStoredHandle but it could be added
+    }
   }, []);
+
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    if (!rootHandle) return false;
+    try {
+      // @ts-ignore
+      const status = await rootHandle.requestPermission({ mode: 'read' });
+      setPermissionStatus(status);
+      return status === 'granted';
+    } catch (err) {
+      console.error("Failed to request permission:", err);
+      return false;
+    }
+  }, [rootHandle]);
 
   const exportProgress = useCallback(() => {
     const dataToExport = { ...progress, courseData };
@@ -190,12 +229,14 @@ export const CourseProgressProvider: React.FC<{ children: React.ReactNode }> = (
     progress,
     courseData,
     rootHandle,
+    permissionStatus,
     updateVideoProgress,
     markVideoCompleted,
     markVideoUncompleted,
     setVideoRootPath,
     setCourseData,
     setRootHandle,
+    requestPermission,
     exportProgress,
     importProgress,
     getProgress

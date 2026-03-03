@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
+import { Lock as LockIcon } from '@mui/icons-material';
 
 import { CourseOutline } from '../components/CourseOutline';
 import { VideoPlayer } from '../components/VideoPlayer';
@@ -10,9 +11,11 @@ export const CoursePlayer: React.FC = () => {
     progress, 
     courseData, 
     rootHandle,
+    permissionStatus,
     updateVideoProgress, 
     getProgress, 
-    markVideoUncompleted 
+    markVideoUncompleted,
+    requestPermission
   } = useCourseProgress() as any;
   
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export const CoursePlayer: React.FC = () => {
 
       // If we have a rootHandle (File System Access API), use it to create Blob URLs
       // This is required for Vercel/Production hosting
-      if (rootHandle) {
+      if (rootHandle && permissionStatus === 'granted') {
         try {
           const resolveFile = async (path: string) => {
             const parts = path.split(/[/\\]/);
@@ -83,14 +86,14 @@ export const CoursePlayer: React.FC = () => {
           setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : '');
         }
       } else {
-        // Localhost dev mode fallback
+        // Localhost dev mode fallback or permission not granted yet
         setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
         setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : '');
       }
     };
 
     resolveUrls();
-  }, [activeVideo, rootHandle, videoRootPath]);
+  }, [activeVideo, rootHandle, permissionStatus, videoRootPath]);
 
   const handleVideoSelect = React.useCallback((v: any) => {
     setActiveVideoId(v.id);
@@ -108,6 +111,8 @@ export const CoursePlayer: React.FC = () => {
   const handleNext = () => nextVideo && setActiveVideoId(nextVideo.id);
   const handlePrevious = () => prevVideo && setActiveVideoId(prevVideo.id);
 
+  const needsPermission = rootHandle && permissionStatus === 'prompt';
+
   return (
     <Box sx={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
         <Box sx={{ width: '350px', flexShrink: 0, borderRight: '1px solid #1f2937' }}>
@@ -120,7 +125,40 @@ export const CoursePlayer: React.FC = () => {
             />
         </Box>
         
-        <Box sx={{ flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box sx={{ flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+            {needsPermission && (
+              <Box sx={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                right: 0, 
+                bottom: 0, 
+                bgcolor: 'rgba(0,0,0,0.85)', 
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                p: 4,
+                backdropFilter: 'blur(4px)'
+              }}>
+                <LockIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h5" fontWeight="bold" gutterBottom>Local File Access Required</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500 }}>
+                  For security, the browser needs your permission to access the local course folder on your computer after a refresh.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  size="large" 
+                  onClick={requestPermission}
+                  sx={{ borderRadius: 2, px: 4, py: 1.5, fontWeight: 'bold' }}
+                >
+                  Restore Access & Play
+                </Button>
+              </Box>
+            )}
+
             {activeVideoId && activeVideo ? (
                 <VideoPlayer 
                     videoId={activeVideoId} 
