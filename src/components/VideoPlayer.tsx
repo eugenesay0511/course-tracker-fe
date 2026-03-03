@@ -52,6 +52,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         video.currentTime = 0;
       }
       video.play().catch(e => console.log('Autoplay blocked:', e));
+      
+      // Auto-focus the video so keyboard shortcuts (Space, Arrows) work immediately
+      video.focus();
     }
     // We do NOT want getProgress in the dependency array to avoid infinite loop when progress updates
   // eslint-disable-next-line react-hooks/exhaustive-deps
