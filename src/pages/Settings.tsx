@@ -26,7 +26,11 @@ export const Settings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleSavePath = (pathOverride?: string, newCourseData?: any[]) => {
-    const pathToSave = pathOverride !== undefined ? pathOverride : rootPath.trim();
+    let pathToSave = pathOverride !== undefined ? pathOverride : rootPath.trim();
+    
+    // Remote surrounding quotes if pasted (e.g. "C:\Path" -> C:\Path)
+    pathToSave = pathToSave.replace(/^["']|["']$/g, '');
+
     if (!pathToSave) {
       setError("Path cannot be empty");
       return;
@@ -55,6 +59,40 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleBrowseAndScan = async () => {
+    try {
+      if ('showDirectoryPicker' in window) {
+        // @ts-ignore
+        const handle = await (window as any).showDirectoryPicker();
+        if (handle) {
+          const folderName = handle.name;
+          
+          // Try to reconstruct the path if the user has already typed something in
+          const currentVal = rootPath.trim();
+          let newPath = folderName;
+          
+          if (currentVal) {
+            // Remove existing quotes if any
+            const strippedVal = currentVal.replace(/^["']|["']$/g, '');
+            const lastSlash = Math.max(strippedVal.lastIndexOf('/'), strippedVal.lastIndexOf('\\'));
+            if (lastSlash !== -1) {
+              const baseDir = strippedVal.substring(0, lastSlash + 1);
+              newPath = baseDir + folderName;
+            }
+          }
+          
+          const scannedData = await scanCourseDirectory(handle);
+          setRootPath(newPath);
+          handleSavePath(newPath, scannedData);
+        }
+      } else {
+        alert("Your browser doesn't support directory scanning. Please update your path manually.");
+      }
+    } catch (err) {
+      console.error("Directory picker error:", err);
+    }
+  };
+
   return (
     <Box sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -72,7 +110,7 @@ export const Settings: React.FC = () => {
           </Tooltip>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Point this to the folder containing your chapters (e.g., "C:/Courses/My-Full-Course").
+          Step 1: Paste full path. Step 2: Click "Save & Scan" and select the folder.
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <TextField
@@ -83,45 +121,20 @@ export const Settings: React.FC = () => {
             value={rootPath}
             onChange={(e) => setRootPath(e.target.value)}
             error={!!error}
-            helperText={error || "Note: Browser security might only show the folder name. Please ensure the full absolute path is correct."}
+            helperText={error || "Tip: Paste your path here first to help the app reconstruct the full absolute path."}
           />
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button 
-              variant="outlined" 
-              onClick={async () => {
-                try {
-                  if ('showDirectoryPicker' in window) {
-                    // @ts-ignore
-                    const handle = await (window as any).showDirectoryPicker();
-                    if (handle) {
-                      const folderName = handle.name;
-                      const currentVal = rootPath || "";
-                      const lastSlash = Math.max(currentVal.lastIndexOf('/'), currentVal.lastIndexOf('\\'));
-                      let newPath = folderName;
-                      if (lastSlash !== -1) {
-                          const baseDir = currentVal.substring(0, lastSlash + 1);
-                          newPath = baseDir + folderName;
-                      }
-                      
-                      const scannedData = await scanCourseDirectory(handle);
-                      setRootPath(newPath);
-                      handleSavePath(newPath, scannedData); // Auto-save with scanned data
-                    }
-                  } else {
-                    alert("Your browser doesn't support directory scanning. Please update your path manually.");
-                  }
-                } catch (err) {
-                  console.error("Directory picker error:", err);
-                }
-              }}
+              variant="contained"
+              onClick={handleBrowseAndScan}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              Browse & Scan
+              Save & Scan
             </Button>
           </Box>
         </Box>
         <Alert severity="info" sx={{ mt: 3, bgcolor: 'rgba(59, 130, 246, 0.05)', color: 'primary.light', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-          Note: If the path is outside the project root, set `strict: false` in `vite.config.ts`.
+          For security reasons, you must provide the <b>full absolute path</b> and manually <b>select the folder</b> to grant permission for the app to scan and list your files.
         </Alert>
       </Paper>
 

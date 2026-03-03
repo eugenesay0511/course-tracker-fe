@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip, Stack } from '@mui/material';
+import { NavigateNext as NextIcon, NavigateBefore as PrevIcon } from '@mui/icons-material';
 import type { VideoProgress } from '../hooks/useCourseProgress';
 
 interface VideoPlayerProps {
@@ -9,9 +10,24 @@ interface VideoPlayerProps {
   title: string;
   updateVideoProgress: (videoId: string, currentTime: number, duration: number) => void;
   getProgress: (videoId: string) => VideoProgress | undefined;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, videoSrc, subtitleSrc, title, updateVideoProgress, getProgress }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  videoId, 
+  videoSrc, 
+  subtitleSrc, 
+  title, 
+  updateVideoProgress, 
+  getProgress,
+  onNext,
+  onPrevious,
+  hasNext,
+  hasPrevious
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
   
@@ -81,7 +97,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, videoSrc, sub
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.default', p: 3, borderRadius: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>{title}</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, flexGrow: 1, mr: 2 }}>{title}</Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Previous Video">
+            <span>
+              <IconButton 
+                onClick={onPrevious} 
+                disabled={!hasPrevious}
+                sx={{ bgcolor: 'rgba(255,255,255,0.05)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+              >
+                <PrevIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Next Video">
+            <span>
+              <IconButton 
+                onClick={onNext} 
+                disabled={!hasNext}
+                sx={{ bgcolor: 'rgba(255,255,255,0.05)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+              >
+                <NextIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+      </Stack>
       <Box sx={{ flexGrow: 1, position: 'relative', bgcolor: 'black', borderRadius: 2, overflow: 'hidden', boxShadow: 3 }}>
         <video
           ref={videoRef}

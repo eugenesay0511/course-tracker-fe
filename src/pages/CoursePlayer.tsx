@@ -42,6 +42,18 @@ export const CoursePlayer: React.FC = () => {
     setActiveVideoId(v.id);
   }, []);
 
+  // Flattened video list for sequential navigation
+  const allVideos = React.useMemo(() => {
+    return courseData.flatMap((chapter: any) => chapter.videos);
+  }, [courseData]);
+
+  const currentIndex = allVideos.findIndex((v: any) => v.id === activeVideoId);
+  const nextVideo = currentIndex !== -1 && currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
+  const prevVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
+
+  const handleNext = () => nextVideo && setActiveVideoId(nextVideo.id);
+  const handlePrevious = () => prevVideo && setActiveVideoId(prevVideo.id);
+
   return (
     <Box sx={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
         <Box sx={{ width: '350px', flexShrink: 0, borderRight: '1px solid #1f2937' }}>
@@ -63,6 +75,10 @@ export const CoursePlayer: React.FC = () => {
                     title={activeVideo.title} 
                     updateVideoProgress={updateVideoProgress}
                     getProgress={getProgress}
+                    onNext={handleNext}
+                    onPrevious={handlePrevious}
+                    hasNext={!!nextVideo}
+                    hasPrevious={!!prevVideo}
                 />
             ) : (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>

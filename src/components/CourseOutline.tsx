@@ -102,15 +102,14 @@ const VideoListItem = React.memo(({ video, isActive, isCompleted, onVideoSelect,
 export const CourseOutline: React.FC<CourseOutlineProps> = ({ data, activeVideoId, onVideoSelect, getProgress, markVideoUncompleted }) => {
   const [expanded, setExpanded] = useState<string | false>(false);
 
-  // Auto-expand the chapter containing the active video on initial load
+  // Auto-expand the chapter containing the active video whenever it changes
   React.useEffect(() => {
-    if (activeVideoId && !expanded) {
+    if (activeVideoId) {
       const chapter = data.find(c => c.videos.some(v => v.id === activeVideoId));
       if (chapter) {
         setExpanded(chapter.id);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVideoId, data]);
 
   const handleChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
