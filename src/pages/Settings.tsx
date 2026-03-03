@@ -20,7 +20,7 @@ import { useCourseProgress } from '../hooks/useCourseProgress';
 import { scanCourseDirectory } from '../utils/scanner';
 
 export const Settings: React.FC = () => {
-  const { progress, setVideoRootPath, setCourseData, exportProgress, importProgress } = useCourseProgress();
+  const { progress, setVideoRootPath, setCourseData, setRootHandle, exportProgress, importProgress } = useCourseProgress();
   const [rootPath, setRootPath] = useState(progress.settings.videoRootPath);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +80,9 @@ export const Settings: React.FC = () => {
               newPath = baseDir + folderName;
             }
           }
+          
+          // Store the handle for Vercel/Production mode
+          setRootHandle(handle);
           
           const scannedData = await scanCourseDirectory(handle);
           setRootPath(newPath);

@@ -71,6 +71,7 @@ const loadCourseData = (): any[] => {
 export function useCourseProgress() {
   const [progress, setProgress] = useState<CourseProgressState>(loadProgress);
   const [courseData, setCourseDataState] = useState<any[]>(loadCourseData);
+  const [rootHandle, setRootHandleState] = useState<FileSystemDirectoryHandle | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
@@ -144,6 +145,10 @@ export function useCourseProgress() {
     setCourseDataState(data);
   }, []);
 
+  const setRootHandle = useCallback((handle: FileSystemDirectoryHandle | null) => {
+    setRootHandleState(handle);
+  }, []);
+
   const exportProgress = useCallback(() => {
     // Merge progress and courseData for export to maintain backward compatibility
     const dataToExport = {
@@ -197,11 +202,13 @@ export function useCourseProgress() {
   return {
     progress,
     courseData,
+    rootHandle,
     updateVideoProgress,
     markVideoCompleted,
     markVideoUncompleted,
     setVideoRootPath,
     setCourseData,
+    setRootHandle,
     exportProgress,
     importProgress,
     getProgress

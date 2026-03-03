@@ -6,8 +6,18 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import { useCourseProgress } from '../hooks/useCourseProgress';
 
 export const CoursePlayer: React.FC = () => {
-  const { progress, courseData, updateVideoProgress, getProgress, markVideoUncompleted } = useCourseProgress() as any;
+  const { 
+    progress, 
+    courseData, 
+    rootHandle,
+    updateVideoProgress, 
+    getProgress, 
+    markVideoUncompleted 
+  } = useCourseProgress() as any;
+  
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string>('');
+  const [resolvedSubtitleSrc, setResolvedSubtitleSrc] = useState<string>('');
 
   const videoRootPath = progress.settings?.videoRootPath || '';
 
@@ -20,23 +30,67 @@ export const CoursePlayer: React.FC = () => {
     }
   }, []);
 
-  // Find active video object to pass title and path
-  let activeVideo = null;
-  for (const chapter of courseData) {
-    const video = chapter.videos.find((v: any) => v.id === activeVideoId);
-    if (video) {
-        activeVideo = video;
-        break;
+  // Find active video object
+  const activeVideo = React.useMemo(() => {
+    for (const chapter of courseData) {
+      const video = chapter.videos.find((v: any) => v.id === activeVideoId);
+      if (video) return video;
     }
-  }
+    return null;
+  }, [activeVideoId, courseData]);
 
-  const videoSrc = activeVideo 
-    ? `/@fs/${videoRootPath}/${activeVideo.path}`
-    : '';
+  // Resolve file paths to URLs (Blob URLs for Vercel, @fs for local)
+  useEffect(() => {
+    const resolveUrls = async () => {
+      if (!activeVideo) {
+        setResolvedVideoSrc('');
+        setResolvedSubtitleSrc('');
+        return;
+      }
 
-  const subtitleSrc = activeVideo && activeVideo.srtPath
-    ? `/@fs/${videoRootPath}/${activeVideo.srtPath}`
-    : '';
+      // If we have a rootHandle (File System Access API), use it to create Blob URLs
+      // This is required for Vercel/Production hosting
+      if (rootHandle) {
+        try {
+          const resolveFile = async (path: string) => {
+            const parts = path.split(/[/\\]/);
+            let current = rootHandle;
+            for (let i = 0; i < parts.length - 1; i++) {
+              current = await current.getDirectoryHandle(parts[i]);
+            }
+            const fileHandle = await current.getFileHandle(parts[parts.length - 1]);
+            const file = await fileHandle.getFile();
+            return URL.createObjectURL(file);
+          };
+
+          const vUrl = await resolveFile(activeVideo.path);
+          setResolvedVideoSrc(vUrl);
+
+          if (activeVideo.srtPath) {
+            const sUrl = await resolveFile(activeVideo.srtPath);
+            setResolvedSubtitleSrc(sUrl);
+          } else {
+            setResolvedSubtitleSrc('');
+          }
+          
+          return () => {
+             URL.revokeObjectURL(vUrl);
+          };
+        } catch (err) {
+          console.error("Failed to resolve file handles:", err);
+          // Fallback to @fs if handle resolution fails
+          setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
+          setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : '');
+        }
+      } else {
+        // Localhost dev mode fallback
+        setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
+        setResolvedSubtitleSrc(activeVideo.srtPath ? `/@fs/${videoRootPath}/${activeVideo.srtPath}` : '');
+      }
+    };
+
+    resolveUrls();
+  }, [activeVideo, rootHandle, videoRootPath]);
 
   const handleVideoSelect = React.useCallback((v: any) => {
     setActiveVideoId(v.id);
@@ -70,8 +124,8 @@ export const CoursePlayer: React.FC = () => {
             {activeVideoId && activeVideo ? (
                 <VideoPlayer 
                     videoId={activeVideoId} 
-                    videoSrc={videoSrc} 
-                    subtitleSrc={subtitleSrc}
+                    videoSrc={resolvedVideoSrc} 
+                    subtitleSrc={resolvedSubtitleSrc}
                     title={activeVideo.title} 
                     updateVideoProgress={updateVideoProgress}
                     getProgress={getProgress}
