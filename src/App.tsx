@@ -66,35 +66,39 @@ function Navigation() {
   );
 }
 
+import { CourseProgressProvider } from './context/CourseProgressContext';
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-          
-          <AppBar position="static" elevation={1}>
-            <Toolbar>
-              <SchoolIcon sx={{ mr: 2 }} />
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                Course Tracker
-              </Typography>
-              <Navigation />
-            </Toolbar>
-          </AppBar>
+      <CourseProgressProvider>
+        <BrowserRouter>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+            
+            <AppBar position="static" elevation={1}>
+              <Toolbar>
+                <SchoolIcon sx={{ mr: 2 }} />
+                <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
+                  Course Tracker
+                </Typography>
+                <Navigation />
+              </Toolbar>
+            </AppBar>
 
-          <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/course" element={<CoursePlayer />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
+            <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/course" element={<CoursePlayer />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </Box>
             </Box>
-          </Box>
 
-        </Box>
-      </BrowserRouter>
+          </Box>
+        </BrowserRouter>
+      </CourseProgressProvider>
     </ThemeProvider>
   );
 }
