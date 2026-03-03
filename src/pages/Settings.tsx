@@ -107,7 +107,7 @@ export const Settings: React.FC = () => {
         Configure your course paths and manage your learning data.
       </Typography>
 
-      <Paper sx={{ p: 3, mb: 4, border: '1px solid #1f2937' }}>
+      <Paper sx={{ p: 3, mb: 4, border: 1, borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
           <Typography variant="h6">Course Location</Typography>
           <Tooltip title="This is the folder where your course videos are stored.">
@@ -138,12 +138,12 @@ export const Settings: React.FC = () => {
             </Button>
           </Box>
         </Box>
-        <Alert severity="info" sx={{ mt: 3, bgcolor: 'rgba(59, 130, 246, 0.05)', color: 'primary.light', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+        <Alert severity="info" sx={(theme) => ({ mt: 3, bgcolor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(37, 99, 235, 0.05)', color: theme.palette.mode === 'dark' ? 'primary.light' : 'primary.main', border: 1, borderColor: 'primary.main' })}>
           For security reasons, you must manually <b>select the folder</b> to grant permission. Providing the <b>full absolute path</b> is optional but recommended.
         </Alert>
       </Paper>
 
-      <Paper sx={{ p: 3, border: '1px solid #1f2937' }}>
+      <Paper sx={{ p: 3, border: 1, borderColor: 'divider' }}>
         <Typography variant="h6" gutterBottom>Data Management</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Export your progress to back it up or move it to another computer.

@@ -167,7 +167,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {keys.map(k => (
           <Paper key={k} sx={{ 
             px: 1, py: 0.3, fontSize: '0.75rem', fontWeight: 'bold', 
-            bgcolor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' 
+            bgcolor: 'action.hover', border: 1, borderColor: 'divider' 
           }}>
             {k}
           </Paper>
@@ -193,7 +193,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <IconButton 
                 onClick={onPrevious} 
                 disabled={!hasPrevious}
-                sx={{ bgcolor: 'rgba(255,255,255,0.05)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+                sx={{ bgcolor: 'action.hover', '&:hover': { bgcolor: 'action.selected' } }}
               >
                 <PrevIcon />
               </IconButton>
@@ -204,7 +204,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <IconButton 
                 onClick={onNext} 
                 disabled={!hasNext}
-                sx={{ bgcolor: 'rgba(255,255,255,0.05)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+                sx={{ bgcolor: 'action.hover', '&:hover': { bgcolor: 'action.selected' } }}
               >
                 <NextIcon />
               </IconButton>
@@ -238,7 +238,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         slotProps={{
           backdrop: {
             timeout: 500,
-            sx: { backdropFilter: 'blur(4px)', bgcolor: 'rgba(0,0,0,0.8)' }
+            sx: (theme) => ({ backdropFilter: 'blur(4px)', bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)' })
           }
         }}
       >
@@ -249,8 +249,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             left: '50%',
             transform: 'translate(-50%, -50%)',
             width: 400,
-            bgcolor: '#1e293b',
-            border: '1px solid #334155',
+            bgcolor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
             boxShadow: 24,
             p: 4,
             borderRadius: 4,
@@ -281,7 +282,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <ShortcutRow label="Show Shortcuts" keys={['?', '/']} />
             </Stack>
             
-            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+            <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
               <Typography variant="caption" color="text.secondary">
                 Focus the video player to use these shortcuts
               </Typography>

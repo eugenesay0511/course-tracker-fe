@@ -74,15 +74,16 @@ export const Dashboard: React.FC = () => {
       <Grid container spacing={3} sx={{ mt: 2 }}>
         {/* Quick Resume Card */}
         <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ 
+            <Card sx={(theme) => ({ 
                 height: '100%', 
                 display: 'flex', 
                 flexDirection: 'column', 
-                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                border: '1px solid #334155',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                background: theme.palette.mode === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
+                border: 1,
+                borderColor: 'divider',
+                boxShadow: theme.palette.mode === 'dark' ? '0 10px 15px -3px rgba(0, 0, 0, 0.5)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                 borderRadius: 4
-            }}>
+            })}>
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
                     <Typography variant="subtitle1" color="primary.main" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <PlayIcon fontSize="small" />
@@ -103,7 +104,7 @@ export const Dashboard: React.FC = () => {
                                 <Typography variant="caption" color="text.secondary">Progress</Typography>
                                 <Typography variant="caption" color="text.secondary" fontWeight="bold">{lastVideoProgressStr}</Typography>
                             </Box>
-                            <Box sx={{ width: '100%', height: 6, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                            <Box sx={{ width: '100%', height: 6, bgcolor: 'action.hover', borderRadius: 3, overflow: 'hidden' }}>
                                 <Box sx={{ height: '100%', bgcolor: 'secondary.main', width: `${lastVideoPercent}%`, borderRadius: 3 }} />
                             </Box>
                         </Box>
@@ -132,7 +133,7 @@ export const Dashboard: React.FC = () => {
                             {
                                 data: [
                                     { id: 0, value: completedVideos, label: 'Completed', color: '#10b981' },
-                                    { id: 1, value: remainingVideos, label: 'Remaining', color: '#1f2937' },
+                                    { id: 1, value: remainingVideos, label: 'Remaining', color: '#94a3b8' },
                                 ],
                                 innerRadius: 50,
                                 outerRadius: 80,
@@ -172,12 +173,12 @@ export const Dashboard: React.FC = () => {
                                             height: 24, 
                                             fontSize: '0.85rem', 
                                             fontWeight: 'bold',
-                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            borderColor: 'divider',
                                             color: 'text.secondary'
                                         }}
                                     />
                                 </Box>
-                                <Box sx={{ w: '100%', height: 4, bgcolor: '#1f2937', borderRadius: 2, overflow: 'hidden' }}>
+                                <Box sx={(theme) => ({ w: '100%', height: 4, bgcolor: theme.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0', borderRadius: 2, overflow: 'hidden' })}>
                                     <Box 
                                         sx={{ 
                                             height: '100%', 

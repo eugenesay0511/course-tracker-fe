@@ -62,18 +62,19 @@ const VideoListItem = React.memo(({ video, isActive, isCompleted, onVideoSelect,
     <ListItemButton 
       selected={isActive}
       onClick={() => onVideoSelect(video)}
-      sx={{ 
+      sx={(theme) => ({ 
         pl: 4, 
         py: 1.5,
         '&.Mui-selected': {
-           bgcolor: 'rgba(59, 130, 246, 0.15)',
-           borderLeft: '4px solid #3b82f6',
+           bgcolor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.1)',
+           borderLeft: 4,
+           borderColor: 'primary.main',
            '&:hover': {
-               bgcolor: 'rgba(59, 130, 246, 0.25)',
+               bgcolor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(37, 99, 235, 0.2)',
            }
         },
         borderLeft: '4px solid transparent',
-      }}
+      })}
     >
       <ListItemIcon sx={{ minWidth: 36 }}>
         {isCompleted ? (
@@ -117,7 +118,7 @@ export const CourseOutline: React.FC<CourseOutlineProps> = ({ data, activeVideoI
   };
 
   return (
-    <Box sx={{ 
+    <Box sx={(theme) => ({ 
       width: '100%', 
       height: '100%', 
       overflowY: 'auto', 
@@ -129,16 +130,16 @@ export const CourseOutline: React.FC<CourseOutlineProps> = ({ data, activeVideoI
         bgcolor: 'transparent',
       },
       '&::-webkit-scrollbar-thumb': {
-        bgcolor: 'rgba(255, 255, 255, 0.1)',
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
         borderRadius: '10px',
         '&:hover': {
-          bgcolor: 'rgba(255, 255, 255, 0.2)',
+          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
         },
       },
       scrollbarWidth: 'thin',
-      scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent',
-    }}>
-      <Typography variant="h6" sx={{ p: 2, borderBottom: '1px solid #1f2937', fontWeight: 'bold' }}>
+      scrollbarColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1) transparent' : 'rgba(0, 0, 0, 0.1) transparent',
+    })}>
+      <Typography variant="h6" sx={{ p: 2, borderBottom: 1, borderColor: 'divider', fontWeight: 'bold' }}>
         Course Outline
       </Typography>
       {data.map((chapter) => (

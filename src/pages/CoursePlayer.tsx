@@ -115,7 +115,7 @@ export const CoursePlayer: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
-        <Box sx={{ width: '350px', flexShrink: 0, borderRight: '1px solid #1f2937' }}>
+        <Box sx={{ width: '350px', flexShrink: 0, borderRight: 1, borderColor: 'divider' }}>
             <CourseOutline 
                 data={courseData} 
                 activeVideoId={activeVideoId} 
@@ -127,13 +127,13 @@ export const CoursePlayer: React.FC = () => {
         
         <Box sx={{ flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
             {needsPermission && (
-              <Box sx={{ 
+              <Box sx={(theme) => ({ 
                 position: 'absolute', 
                 top: 0, 
                 left: 0, 
                 right: 0, 
                 bottom: 0, 
-                bgcolor: 'rgba(0,0,0,0.85)', 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)', 
                 zIndex: 10,
                 display: 'flex',
                 flexDirection: 'column',
@@ -142,7 +142,7 @@ export const CoursePlayer: React.FC = () => {
                 textAlign: 'center',
                 p: 4,
                 backdropFilter: 'blur(4px)'
-              }}>
+              })}>
                 <LockIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h5" fontWeight="bold" gutterBottom>Local File Access Required</Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500 }}>
