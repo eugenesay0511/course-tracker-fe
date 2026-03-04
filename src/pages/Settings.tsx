@@ -9,13 +9,21 @@ import {
   IconButton,
   Tooltip,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Divider,
 } from "@mui/material";
 import {
   Download as ExportIcon,
   Upload as ImportIcon,
   Info as InfoIcon,
   CheckCircle as SuccessIcon,
+  DeleteForever as DeleteIcon,
 } from "@mui/icons-material";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useCourseProgress } from "../hooks/useCourseProgress";
 import { scanCourseDirectory } from "../utils/scanner";
 
@@ -27,10 +35,14 @@ export const Settings: React.FC = () => {
     setRootHandle,
     exportProgress,
     importProgress,
+    clearProgress,
   } = useCourseProgress();
   const [rootPath, setRootPath] = useState(progress.settings.videoRootPath);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const handleSavePath = (pathOverride?: string, newCourseData?: any[]) => {
     let pathToSave =
@@ -100,6 +112,11 @@ export const Settings: React.FC = () => {
           const scannedData = await scanCourseDirectory(handle);
           setRootPath(newPath);
           handleSavePath(newPath, scannedData);
+
+          // If we came from the dashboard, go back after success
+          if (searchParams.get("action") === "select-folder") {
+            setTimeout(() => navigate("/"), 500);
+          }
         }
       } else {
         alert(
@@ -111,6 +128,12 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleClearProgress = () => {
+    clearProgress();
+    setConfirmClearOpen(false);
+    setSnackbarOpen(true);
+  };
+
   return (
     <Box sx={{ p: 4, maxWidth: 800, mx: "auto" }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -120,7 +143,18 @@ export const Settings: React.FC = () => {
         Configure your course paths and manage your learning data.
       </Typography>
 
-      <Paper sx={{ p: 3, mb: 4, border: 1, borderColor: "divider" }}>
+      <Paper
+        sx={{
+          p: 3,
+          mb: 4,
+          border: 2,
+          borderColor:
+            searchParams.get("action") === "select-folder"
+              ? "primary.main"
+              : "divider",
+          boxShadow: searchParams.get("action") === "select-folder" ? 4 : 0,
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
           <Typography variant="h6">Course Location</Typography>
           <Tooltip title="This is the folder where your course videos are stored.">
@@ -151,12 +185,22 @@ export const Settings: React.FC = () => {
             <Button
               variant="contained"
               onClick={handleBrowseAndScan}
-              sx={{ whiteSpace: "nowrap" }}
+              sx={{
+                whiteSpace: "nowrap",
+                scale:
+                  searchParams.get("action") === "select-folder" ? "1.05" : "1",
+                transition: "all 0.2s",
+              }}
             >
               Select Folder
             </Button>
           </Box>
         </Box>
+        {searchParams.get("action") === "select-folder" && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            Please click "Select Folder" to update your course directory.
+          </Alert>
+        )}
         <Alert
           severity="info"
           sx={(theme) => ({
@@ -203,7 +247,67 @@ export const Settings: React.FC = () => {
             <input type="file" hidden accept=".json" onChange={handleImport} />
           </Button>
         </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        <Box>
+          <Typography
+            variant="subtitle1"
+            color="error"
+            fontWeight="bold"
+            gutterBottom
+          >
+            Danger Zone
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Permanently delete all your watch history and progress. This cannot
+            be undone.
+          </Typography>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={() => setConfirmClearOpen(true)}
+          >
+            Clear User Progress
+          </Button>
+        </Box>
       </Paper>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmClearOpen}
+        onClose={() => setConfirmClearOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle
+          id="alert-dialog-title"
+          sx={{ color: "error.main", fontWeight: "bold" }}
+        >
+          {"Clear All Progress?"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            This will permanently reset all your video progress, watched time,
+            and completed status. Your course location and settings will remain
+            as they are.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setConfirmClearOpen(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleClearProgress}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Clear Everything
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbarOpen}

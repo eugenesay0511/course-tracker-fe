@@ -22,50 +22,96 @@ import {
   PlayCircleOutline as PlayIcon,
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
+  FolderOpen as ChapterIcon,
+  AccessTime as ClockIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@mui/material";
 
 import { useCourseProgress } from "../hooks/useCourseProgress";
 
 export const Dashboard: React.FC = () => {
-  const { progress = { videos: {} }, courseData = [] } =
-    useCourseProgress() as any;
+  const {
+    progress = { videos: {}, settings: { videoRootPath: "" } },
+    courseData = [],
+    rootHandle,
+  } = useCourseProgress() as any;
   const navigate = useNavigate();
   const [selectedChapter, setSelectedChapter] = React.useState<any>(null);
+  const theme = useTheme();
 
   // Calculate statistics
   let totalVideos = 0;
   let completedVideos = 0;
+  let inProgressVideos = 0;
+  let totalWatchedTime = 0;
+
+  let totalTime = 0;
+
   const chapterStats: {
     id: number;
     title: string;
     total: number;
     completed: number;
+    inProgress: number;
+    watchedTime: number;
+    totalTime: number;
     videos: any[];
   }[] = [];
 
   courseData.forEach((chapter: any, idx: number) => {
     const chapterTotal = chapter.videos.length;
     let chapterCompleted = 0;
+    let chapterInProgress = 0;
+    let chapterWatchedTime = 0;
+    let chapterTotalTime = 0;
 
     chapter.videos.forEach((video: any) => {
       totalVideos++;
-      if (progress?.videos?.[video.id]?.completed) {
-        completedVideos++;
-        chapterCompleted++;
+      const vidProg = progress?.videos?.[video.id];
+      if (vidProg) {
+        if (vidProg.completed) {
+          completedVideos++;
+          chapterCompleted++;
+        } else if (vidProg.currentTime > 0) {
+          inProgressVideos++;
+        }
+
+        const dur = vidProg.duration || 0;
+        const cur = vidProg.currentTime || 0;
+
+        chapterTotalTime += dur;
+        chapterWatchedTime += vidProg.completed ? dur : cur;
       }
     });
+
+    totalWatchedTime += chapterWatchedTime;
+    totalTime += chapterTotalTime;
 
     chapterStats.push({
       id: idx,
       title: chapter.title,
       total: chapterTotal,
       completed: chapterCompleted,
+      inProgress: chapterInProgress,
+      watchedTime: chapterWatchedTime,
+      totalTime: chapterTotalTime,
       videos: chapter.videos,
     });
   });
 
-  const remainingVideos = totalVideos - completedVideos;
+  const remainingVideos = Math.max(0, totalVideos - completedVideos);
+
+  const formatDuration = (secs: number) => {
+    if (!secs) return "0s";
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s > 0 ? `${s}s` : ""}`.trim();
+    return `${s}s`;
+  };
 
   // Find last watched video details for quick resume
   let lastVideoTitle = "Start your journey";
@@ -101,6 +147,12 @@ export const Dashboard: React.FC = () => {
     }
   }
 
+  const folderName =
+    rootHandle?.name ||
+    (progress.settings?.videoRootPath
+      ? progress.settings.videoRootPath.split(/[/\\]/).filter(Boolean).pop()
+      : null);
+
   return (
     <Box
       sx={{
@@ -124,11 +176,292 @@ export const Dashboard: React.FC = () => {
         },
       }}
     >
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Learning Dashboard
-      </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "flex-start", sm: "center" },
+          gap: 2.5,
+          mb: 2,
+          justifyContent: "space-between",
+        }}
+      >
+        <Typography
+          variant="h4"
+          fontWeight={900}
+          sx={{
+            letterSpacing: "-1.5px",
+            background: (theme) =>
+              theme.palette.mode === "dark"
+                ? "linear-gradient(90deg, #FFFFFF 0%, #CBD5E1 100%)"
+                : "linear-gradient(90deg, #0F172A 0%, #64748B 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            lineHeight: 1.2,
+          }}
+        >
+          Learning Dashboard
+        </Typography>
+
+        {folderName && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              px: 2,
+              py: 1,
+              borderRadius: "100px",
+              bgcolor: "background.paper",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 4px 20px rgba(0,0,0,0.4)"
+                  : "0 4px 20px rgba(0,0,0,0.05)",
+              border: 1,
+              borderColor: "divider",
+              transition: "all 0.2s ease",
+              cursor: "pointer",
+              "&:hover": {
+                transform: "translateY(-1px)",
+                borderColor: "primary.main",
+                bgcolor: "action.hover",
+              },
+            }}
+            onClick={() => navigate("/settings?action=select-folder")}
+          >
+            <ChapterIcon sx={{ fontSize: 20, color: "primary.main" }} />
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {folderName}
+            </Typography>
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ height: 14, my: "auto", mx: 0.5, opacity: 0.5 }}
+            />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  bgcolor: "#10b981",
+                  boxShadow: "0 0 8px rgba(16, 185, 129, 0.4)",
+                }}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 800,
+                  color: "#10b981",
+                  fontSize: "0.65rem",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                SYNCED
+              </Typography>
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
+        {/* Analytics Section */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Grid container spacing={3} sx={{ height: "100%" }}>
+            {/* Overall Progress Card */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Card
+                sx={(theme) => ({
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
+                      : "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+                  border: 1,
+                  borderColor: "divider",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
+                      : "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                  borderRadius: 4,
+                })}
+              >
+                <CardContent
+                  sx={{
+                    p: 3,
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="primary.main"
+                    fontWeight="bold"
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                      mb: 2,
+                    }}
+                  >
+                    <CheckCircleIcon sx={{ fontSize: 18 }} />
+                    Overall Progress
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      flexGrow: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: 180,
+                    }}
+                  >
+                    <PieChart
+                      series={[
+                        {
+                          data: [
+                            {
+                              id: 0,
+                              value: completedVideos,
+                              label: "Completed",
+                              color: "#10b981",
+                            },
+                            {
+                              id: 2,
+                              value: remainingVideos,
+                              label: "Remaining",
+                              color: "#94a3b8",
+                            },
+                          ].filter((d) => d.value > 0),
+                          innerRadius: 55,
+                          outerRadius: 80,
+                          paddingAngle: 2,
+                          cornerRadius: 6,
+                          cx: 150,
+                        },
+                      ]}
+                      width={300}
+                      height={180}
+                      margin={{ right: 5 }}
+                      slotProps={
+                        {
+                          legend: { hidden: true },
+                        } as any
+                      }
+                    />
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    align="center"
+                    sx={{ mt: 2, fontWeight: 500 }}
+                  >
+                    {completedVideos} of {totalVideos} videos done
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Time Watched Card */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Card
+                sx={(theme) => ({
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
+                      : "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+                  border: 1,
+                  borderColor: "divider",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
+                      : "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                  borderRadius: 4,
+                })}
+              >
+                <CardContent
+                  sx={{
+                    p: 3,
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="primary.main"
+                    fontWeight="bold"
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                      mb: 3,
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    <ClockIcon sx={{ fontSize: 18 }} />
+                    Time Watched
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: "primary.main",
+                      color: "white",
+                      mb: 2,
+                      boxShadow: "0 8px 16px -4px rgba(59, 130, 246, 0.5)",
+                    }}
+                  >
+                    <ClockIcon sx={{ fontSize: 40 }} />
+                  </Box>
+
+                  <Typography
+                    variant="h3"
+                    color="text.primary"
+                    fontWeight="900"
+                    sx={{ letterSpacing: "-1px" }}
+                  >
+                    {formatDuration(totalWatchedTime)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Total learning time
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Grid>
+
         {/* Quick Resume Card */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Card
@@ -158,16 +491,22 @@ export const Dashboard: React.FC = () => {
               }}
             >
               <Typography
-                variant="subtitle1"
+                variant="subtitle2"
                 color="primary.main"
                 fontWeight="bold"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  mb: 2,
+                }}
               >
-                <PlayIcon fontSize="small" />
+                <PlayIcon sx={{ fontSize: 18 }} />
                 {progress.lastWatchedVideoId
-                  ? "JUMP BACK IN"
-                  : "READY TO START?"}
+                  ? "Jump Back In"
+                  : "Ready to Start?"}
               </Typography>
 
               {progress.lastWatchedVideoId && (
@@ -255,68 +594,6 @@ export const Dashboard: React.FC = () => {
               </Button>
             </CardContent>
           </Card>
-        </Grid>
-
-        {/* Overall Progress Chart */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper
-            sx={{
-              p: 3,
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Typography variant="h6" gutterBottom>
-              Overall Progress
-            </Typography>
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 200,
-              }}
-            >
-              <PieChart
-                series={[
-                  {
-                    data: [
-                      {
-                        id: 0,
-                        value: completedVideos,
-                        label: "Completed",
-                        color: "#10b981",
-                      },
-                      {
-                        id: 1,
-                        value: remainingVideos,
-                        label: "Remaining",
-                        color: "#94a3b8",
-                      },
-                    ],
-                    innerRadius: 50,
-                    outerRadius: 80,
-                    paddingAngle: 2,
-                    cornerRadius: 4,
-                    cx: 150,
-                  },
-                ]}
-                width={400}
-                height={200}
-                margin={{ right: 5 }}
-              />
-            </Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              align="center"
-              sx={{ mt: 2 }}
-            >
-              {completedVideos} out of {totalVideos} videos completed
-            </Typography>
-          </Paper>
         </Grid>
 
         {/* Chapter Breakdown */}
@@ -528,7 +805,7 @@ export const Dashboard: React.FC = () => {
                                 >
                                   <Typography
                                     variant="body2"
-                                    fontWeight={isCompleted ? 500 : 400}
+                                    fontWeight={isCompleted ? 600 : 400}
                                     color={
                                       isCompleted
                                         ? "success.main"
