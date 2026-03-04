@@ -12,28 +12,19 @@ import {
   ListItemText,
   IconButton,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Stack,
 } from "@mui/material";
 import {
   ExpandMore as ExpandMoreIcon,
   PlayCircleOutline as PlayIcon,
   CheckCircle as CheckCircleIcon,
   Clear as ClearIcon,
+  AlignHorizontalLeft as LeftIcon,
+  AlignHorizontalRight as RightIcon,
 } from "@mui/icons-material";
-import type { VideoProgress } from "../hooks/useCourseProgress";
-
-interface Video {
-  id: string;
-  title: string;
-  filename: string;
-  path: string;
-  srtPath?: string | null;
-}
-
-interface Chapter {
-  id: string;
-  title: string;
-  videos: Video[];
-}
+import type { VideoProgress, Chapter, Video } from "../types";
 
 interface CourseOutlineProps {
   data: Chapter[];
@@ -41,6 +32,8 @@ interface CourseOutlineProps {
   onVideoSelect: (video: Video) => void;
   getProgress: (videoId: string) => VideoProgress | undefined;
   markVideoUncompleted: (videoId: string) => void;
+  outlinePosition?: "left" | "right";
+  onTogglePosition?: (position: "left" | "right") => void;
 }
 
 interface VideoListItemProps {
@@ -135,6 +128,8 @@ export const CourseOutline: React.FC<CourseOutlineProps> = ({
   onVideoSelect,
   getProgress,
   markVideoUncompleted,
+  outlinePosition = "left",
+  onTogglePosition,
 }) => {
   const [expanded, setExpanded] = useState<string | false>(false);
 
@@ -188,17 +183,51 @@ export const CourseOutline: React.FC<CourseOutlineProps> = ({
             : "rgba(0, 0, 0, 0.1) transparent",
       })}
     >
-      <Typography
-        variant="h6"
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
         sx={{
-          p: 2,
+          p: 1.5,
+          pl: 2,
           borderBottom: 1,
           borderColor: "divider",
-          fontWeight: "bold",
         }}
       >
-        Course Outline
-      </Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+          Course Outline
+        </Typography>
+        <ToggleButtonGroup
+          value={outlinePosition}
+          exclusive
+          onChange={(_, val) => val && onTogglePosition?.(val)}
+          size="small"
+          sx={{
+            height: 28,
+            "& .MuiToggleButton-root": {
+              px: 1,
+              border: "none",
+              borderRadius: 1,
+              color: "text.disabled",
+              "&.Mui-selected": {
+                color: "primary.main",
+                bgcolor: "action.selected",
+              },
+            },
+          }}
+        >
+          <ToggleButton value="left" size="small">
+            <Tooltip title="Move Outline Left">
+              <LeftIcon sx={{ fontSize: 18 }} />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="right" size="small">
+            <Tooltip title="Move Outline Right">
+              <RightIcon sx={{ fontSize: 18 }} />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
       {data.map((chapter) => {
         const isChapterActive =
           activeVideoId &&

@@ -72,6 +72,29 @@ export const createAppTheme = (mode: PaletteMode) => createTheme({
              backgroundImage: 'none',
           }
        }
-    }
-  }
+    },
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          scrollbarColor: mode === 'dark' ? '#374151 #0b0f19' : '#cbd5e1 #f8fafc',
+          '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
+            backgroundColor: mode === 'dark' ? '#374151' : '#cbd5e1',
+            borderRadius: '10px',
+            border: '2px solid transparent',
+            backgroundClip: 'padding-box',
+          },
+          '&::-webkit-scrollbar-thumb:hover, & *::-webkit-scrollbar-thumb:hover': {
+            backgroundColor: mode === 'dark' ? '#4b5563' : '#94a3b8',
+          },
+        },
+      },
+    },
+  },
 });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -28,122 +28,134 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { useCourseProgress } from "../hooks/useCourseProgress";
+import { formatDuration, formatTime } from "../utils/formatters";
+import type { Chapter } from "../types";
+
+type ChapterStat = Chapter & {
+  total: number;
+  completed: number;
+  inProgress: number;
+  watchedTime: number;
+  totalTime: number;
+};
 
 export const Dashboard: React.FC = () => {
-  const {
-    progress = { videos: {}, settings: { videoRootPath: "" } },
-    courseData = [],
-    rootHandle,
-  } = useCourseProgress() as any;
+  const { progress, courseData, rootHandle } = useCourseProgress();
   const navigate = useNavigate();
-  const [selectedChapter, setSelectedChapter] = React.useState<any>(null);
+  const [selectedChapter, setSelectedChapter] = useState<ChapterStat | null>(
+    null,
+  );
 
-  // Calculate statistics
-  let totalVideos = 0;
-  let completedVideos = 0;
-  let inProgressVideos = 0;
-  let totalWatchedTime = 0;
+  const stats = useMemo(() => {
+    let totalVideos = 0;
+    let completedVideos = 0;
+    let inProgressVideos = 0;
+    let totalWatchedTime = 0;
+    let totalTime = 0;
 
-  let totalTime = 0;
+    const chapterStats: ChapterStat[] = courseData.map((chapter) => {
+      const chapterTotal = chapter.videos.length;
+      let chapterCompleted = 0;
+      let chapterInProgress = 0;
+      let chapterWatchedTime = 0;
+      let chapterTotalTime = 0;
 
-  const chapterStats: {
-    id: number;
-    title: string;
-    total: number;
-    completed: number;
-    inProgress: number;
-    watchedTime: number;
-    totalTime: number;
-    videos: any[];
-  }[] = [];
-
-  courseData.forEach((chapter: any, idx: number) => {
-    const chapterTotal = chapter.videos.length;
-    let chapterCompleted = 0;
-    let chapterInProgress = 0;
-    let chapterWatchedTime = 0;
-    let chapterTotalTime = 0;
-
-    chapter.videos.forEach((video: any) => {
-      totalVideos++;
-      const vidProg = progress?.videos?.[video.id];
-      if (vidProg) {
-        if (vidProg.completed) {
-          completedVideos++;
-          chapterCompleted++;
-        } else if (vidProg.currentTime > 0) {
-          inProgressVideos++;
-        }
-
-        const dur = vidProg.duration || 0;
-        const cur = vidProg.currentTime || 0;
-
-        chapterTotalTime += dur;
-        chapterWatchedTime += vidProg.completed ? dur : cur;
-      }
-    });
-
-    totalWatchedTime += chapterWatchedTime;
-    totalTime += chapterTotalTime;
-
-    chapterStats.push({
-      id: idx,
-      title: chapter.title,
-      total: chapterTotal,
-      completed: chapterCompleted,
-      inProgress: chapterInProgress,
-      watchedTime: chapterWatchedTime,
-      totalTime: chapterTotalTime,
-      videos: chapter.videos,
-    });
-  });
-
-  const remainingVideos = Math.max(0, totalVideos - completedVideos);
-
-  const formatDuration = (secs: number) => {
-    if (!secs) return "0s";
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = Math.floor(secs % 60);
-
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m ${s > 0 ? `${s}s` : ""}`.trim();
-    return `${s}s`;
-  };
-
-  // Find last watched video details for quick resume
-  let lastVideoTitle = "Start your journey";
-  let lastChapterTitle = "";
-  let lastVideoProgressStr = "";
-  let lastVideoPercent = 0;
-
-  if (progress.lastWatchedVideoId) {
-    for (const chapter of courseData) {
-      const video = chapter.videos.find(
-        (v: any) => v.id === progress.lastWatchedVideoId,
-      );
-      if (video) {
-        lastVideoTitle = video.title;
-        lastChapterTitle = chapter.title;
-        const vidProg = progress?.videos?.[progress.lastWatchedVideoId];
+      chapter.videos.forEach((video) => {
+        totalVideos++;
+        const vidProg = progress?.videos?.[video.id];
         if (vidProg) {
-          const formatTime = (secs: number) => {
-            const m = Math.floor(secs / 60);
-            const s = Math.floor(secs % 60);
-            return `${m}:${s < 10 ? "0" : ""}${s}`;
-          };
-          lastVideoProgressStr = `${formatTime(vidProg.currentTime)} / ${formatTime(vidProg.duration)}`;
-          if (vidProg.duration > 0) {
-            lastVideoPercent = Math.min(
-              100,
-              (vidProg.currentTime / vidProg.duration) * 100,
-            );
+          if (vidProg.completed) {
+            completedVideos++;
+            chapterCompleted++;
+          } else if (vidProg.currentTime > 0) {
+            inProgressVideos++;
           }
+
+          const dur = vidProg.duration || 0;
+          const cur = vidProg.currentTime || 0;
+
+          chapterTotalTime += dur;
+          chapterWatchedTime += vidProg.completed ? dur : cur;
         }
-        break;
+      });
+
+      totalWatchedTime += chapterWatchedTime;
+      totalTime += chapterTotalTime;
+
+      return {
+        ...chapter,
+        total: chapterTotal,
+        completed: chapterCompleted,
+        inProgress: chapterInProgress,
+        watchedTime: chapterWatchedTime,
+        totalTime: chapterTotalTime,
+      };
+    });
+
+    const remainingVideos = Math.max(0, totalVideos - completedVideos);
+
+    return {
+      totalVideos,
+      completedVideos,
+      inProgressVideos,
+      totalWatchedTime,
+      totalTime,
+      remainingVideos,
+      chapterStats,
+    };
+  }, [courseData, progress]);
+
+  const resumeInfo = useMemo(() => {
+    let lastVideoTitle = "Start your journey";
+    let lastChapterTitle = "";
+    let lastVideoProgressStr = "";
+    let lastVideoPercent = 0;
+
+    if (progress?.lastWatchedVideoId) {
+      for (const chapter of courseData) {
+        const video = chapter.videos.find(
+          (v) => v.id === progress.lastWatchedVideoId,
+        );
+        if (video) {
+          lastVideoTitle = video.title;
+          lastChapterTitle = chapter.title;
+          const vidProg = progress.videos[progress.lastWatchedVideoId];
+          if (vidProg) {
+            lastVideoProgressStr = `${formatTime(vidProg.currentTime)} / ${formatTime(vidProg.duration)}`;
+            if (vidProg.duration > 0) {
+              lastVideoPercent = Math.min(
+                100,
+                (vidProg.currentTime / vidProg.duration) * 100,
+              );
+            }
+          }
+          break;
+        }
       }
     }
-  }
+
+    return {
+      lastVideoTitle,
+      lastChapterTitle,
+      lastVideoProgressStr,
+      lastVideoPercent,
+    };
+  }, [courseData, progress]);
+
+  const {
+    totalVideos,
+    completedVideos,
+    totalWatchedTime,
+    remainingVideos,
+    chapterStats,
+  } = stats;
+
+  const {
+    lastVideoTitle,
+    lastChapterTitle,
+    lastVideoProgressStr,
+    lastVideoPercent,
+  } = resumeInfo;
 
   const folderName =
     rootHandle?.name ||

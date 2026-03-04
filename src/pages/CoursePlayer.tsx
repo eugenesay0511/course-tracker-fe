@@ -18,6 +18,7 @@ export const CoursePlayer: React.FC = () => {
     markVideoUncompleted,
     requestPermission,
     setAutoplay,
+    setOutlinePosition,
   } = useCourseProgress() as any;
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string | null>(null);
@@ -159,6 +160,10 @@ export const CoursePlayer: React.FC = () => {
     <Box
       sx={{
         display: "flex",
+        flexDirection:
+          progress.settings?.outlinePosition === "right"
+            ? "row-reverse"
+            : "row",
         width: "100%",
         height: "100%",
         overflow: "hidden",
@@ -168,7 +173,8 @@ export const CoursePlayer: React.FC = () => {
         sx={{
           width: "350px",
           flexShrink: 0,
-          borderRight: 1,
+          borderRight: progress.settings?.outlinePosition === "right" ? 0 : 1,
+          borderLeft: progress.settings?.outlinePosition === "right" ? 1 : 0,
           borderColor: "divider",
         }}
       >
@@ -178,6 +184,8 @@ export const CoursePlayer: React.FC = () => {
           onVideoSelect={handleVideoSelect}
           getProgress={getProgress}
           markVideoUncompleted={markVideoUncompleted}
+          outlinePosition={progress.settings?.outlinePosition}
+          onTogglePosition={setOutlinePosition}
         />
       </Box>
 

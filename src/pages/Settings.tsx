@@ -163,10 +163,7 @@ export const Settings: React.FC = () => {
             </IconButton>
           </Tooltip>
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Step 1 (Optional): Paste full path. Step 2: Click "Select Folder" and
-          select the folder.
-        </Typography>
+
         <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
           <TextField
             fullWidth
@@ -178,7 +175,7 @@ export const Settings: React.FC = () => {
             error={!!error}
             helperText={
               error ||
-              "Tip: Providing the absolute path is optional, but helpful for local dev."
+              "Step 1 (Optional): Paste full path. Step 2: Click 'Select Folder' and select the folder."
             }
           />
           <Box sx={{ display: "flex", gap: 1 }}>

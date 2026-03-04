@@ -4,28 +4,15 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import staticCourseData from "../data/course-data.json";
 import { getStoredHandle, setStoredHandle } from "../utils/idb";
-
-export interface VideoProgress {
-  currentTime: number;
-  duration: number;
-  completed: boolean;
-}
-
-export interface CourseProgressState {
-  lastWatchedVideoId: string | null;
-  videos: Record<string, VideoProgress>;
-  settings: {
-    videoRootPath: string;
-    autoplay: boolean;
-  };
-}
+import type { VideoProgress, CourseProgressState, CourseData } from "../types";
 
 interface CourseProgressContextType {
   progress: CourseProgressState;
-  courseData: any[];
+  courseData: CourseData;
   rootHandle: FileSystemDirectoryHandle | null;
   permissionStatus: PermissionState | null;
   updateVideoProgress: (
@@ -37,7 +24,8 @@ interface CourseProgressContextType {
   markVideoUncompleted: (videoId: string) => void;
   setVideoRootPath: (path: string) => void;
   setAutoplay: (autoplay: boolean) => void;
-  setCourseData: (data: any[]) => void;
+  setOutlinePosition: (position: "left" | "right") => void;
+  setCourseData: (data: CourseData) => void;
   setRootHandle: (handle: FileSystemDirectoryHandle | null) => void;
   requestPermission: () => Promise<boolean>;
   exportProgress: () => void;
@@ -63,10 +51,14 @@ const loadProgress = (): CourseProgressState => {
         parsed.settings = {
           videoRootPath: DEFAULT_ROOT_PATH,
           autoplay: false,
+          outlinePosition: "left",
         };
       }
       if (parsed.settings.autoplay === undefined) {
         parsed.settings.autoplay = false;
+      }
+      if (parsed.settings.outlinePosition === undefined) {
+        parsed.settings.outlinePosition = "left";
       }
       return {
         lastWatchedVideoId: parsed.lastWatchedVideoId || null,
@@ -83,15 +75,16 @@ const loadProgress = (): CourseProgressState => {
     settings: {
       videoRootPath: DEFAULT_ROOT_PATH,
       autoplay: false,
+      outlinePosition: "left",
     },
   };
 };
 
-const loadCourseData = (): any[] => {
+const loadCourseData = (): CourseData => {
   try {
     const data = localStorage.getItem(DATA_STORAGE_KEY);
     if (data) {
-      return JSON.parse(data);
+      return JSON.parse(data) as CourseData;
     }
 
     // Check if it was saved in the old key (legacy support)
@@ -107,27 +100,40 @@ const loadCourseData = (): any[] => {
           DATA_STORAGE_KEY,
           JSON.stringify(parsedOld.courseData),
         );
-        return parsedOld.courseData;
+        return parsedOld.courseData as CourseData;
       }
     }
   } catch (e) {
     console.error("Failed to load course data from localStorage", e);
   }
-  return staticCourseData;
+  return staticCourseData as CourseData;
 };
 
 export const CourseProgressProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const [progress, setProgress] = useState<CourseProgressState>(loadProgress);
-  const [courseData, setCourseDataState] = useState<any[]>(loadCourseData);
+  const [courseData, setCourseDataState] = useState<CourseData>(loadCourseData);
   const [rootHandle, setRootHandleState] =
     useState<FileSystemDirectoryHandle | null>(null);
   const [permissionStatus, setPermissionStatus] =
     useState<PermissionState | null>(null);
 
+  const saveTimeoutRef = useRef<number | null>(null);
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = window.setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [progress]);
 
   useEffect(() => {
@@ -218,7 +224,14 @@ export const CourseProgressProvider: React.FC<{
     }));
   }, []);
 
-  const setCourseData = useCallback((data: any[]) => {
+  const setOutlinePosition = useCallback((position: "left" | "right") => {
+    setProgress((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, outlinePosition: position },
+    }));
+  }, []);
+
+  const setCourseData = useCallback((data: CourseData) => {
     setCourseDataState(data);
   }, []);
 
@@ -310,6 +323,7 @@ export const CourseProgressProvider: React.FC<{
     markVideoUncompleted,
     setVideoRootPath,
     setAutoplay,
+    setOutlinePosition,
     setCourseData,
     setRootHandle,
     requestPermission,

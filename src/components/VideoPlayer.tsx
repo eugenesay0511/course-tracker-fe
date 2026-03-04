@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import {
-  Box,
-  Typography,
-  IconButton,
-  Tooltip,
-  Stack,
-  Chip,
-} from "@mui/material";
+import { Box, Typography, IconButton, Tooltip, Stack } from "@mui/material";
 import {
   NavigateNext as NextIcon,
   NavigateBefore as PrevIcon,
@@ -16,7 +9,7 @@ import {
   Keyboard as KeyboardIcon,
 } from "@mui/icons-material";
 import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
-import type { VideoProgress } from "../hooks/useCourseProgress";
+import type { VideoProgress } from "../types";
 
 // Vidstack Core Imports
 import "@vidstack/react/player/styles/default/theme.css";
@@ -293,39 +286,106 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         borderRadius: 2,
       }}
     >
+      <Box
+        sx={{
+          flexGrow: 1,
+          position: "relative",
+          bgcolor: "black",
+          borderRadius: 3,
+          overflow: "hidden",
+          border: 1,
+          borderColor: "divider",
+          mb: 3,
+          "& video": {
+            objectFit: "contain !important",
+            height: "100% !important",
+            width: "100% !important",
+          },
+        }}
+      >
+        <MediaPlayer
+          ref={playerRef}
+          src={videoSrc ? { src: videoSrc, type: "video/mp4" } : ""}
+          title={title}
+          fullscreenOrientation="none"
+          keyShortcuts={{ seekForward: null, seekBackward: null }}
+          onTimeUpdate={handleTimeUpdate}
+          onCanPlay={onCanPlay}
+          onEnded={handleEnded}
+          autoPlay={autoplay}
+          style={{ width: "100%", height: "100%", outline: "none" }}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+        >
+          <MediaProvider>
+            {vttUrl && (
+              <Track
+                src={vttUrl}
+                kind="subtitles"
+                label="English"
+                lang="en-US"
+                default
+              />
+            )}
+          </MediaProvider>
+          <DefaultVideoLayout icons={defaultLayoutIcons} />
+        </MediaPlayer>
+      </Box>
+
       <Stack
         direction="row"
         justifyContent="space-between"
         alignItems="center"
-        sx={{ mb: 3 }}
+        sx={{ mb: 2 }}
       >
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          {chapterTitle && (
-            <Chip
-              icon={<ChapterIcon sx={{ fontSize: "0.9rem !important" }} />}
-              label={chapterTitle}
-              size="small"
-              variant="outlined"
-              sx={{
-                mb: 1,
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                color: "text.secondary",
-                borderColor: "divider",
-                height: 24,
-                bgcolor: "action.hover",
-                px: 1,
-              }}
-            />
-          )}
+        <Box
+          sx={{
+            flexGrow: 1,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, letterSpacing: "-0.5px" }}
+            sx={{
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
           >
             {title}
           </Typography>
+          {chapterTitle && (
+            <>
+              <Divider
+                orientation="vertical"
+                flexItem
+                sx={{ height: 20, my: "auto", opacity: 0.3 }}
+              />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  color: "text.secondary",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <ChapterIcon
+                  sx={{ fontSize: 16, color: "primary.main", opacity: 0.8 }}
+                />
+                {chapterTitle}
+              </Box>
+            </>
+          )}
         </Box>
         <Box sx={{ display: "flex", gap: 1.5, ml: 2, alignItems: "center" }}>
           <Tooltip title="View Keyboard Shortcuts">
@@ -439,50 +499,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </Tooltip>
         </Box>
       </Stack>
-      <Box
-        sx={{
-          flexGrow: 1,
-          position: "relative",
-          bgcolor: "black",
-          borderRadius: 3,
-          overflow: "hidden",
-          border: 1,
-          borderColor: "divider",
-          "& video": {
-            objectFit: "contain !important",
-            height: "100% !important",
-            width: "100% !important",
-          },
-        }}
-      >
-        <MediaPlayer
-          ref={playerRef}
-          src={videoSrc ? { src: videoSrc, type: "video/mp4" } : ""}
-          title={title}
-          fullscreenOrientation="none"
-          keyShortcuts={{ seekForward: null, seekBackward: null }}
-          onTimeUpdate={handleTimeUpdate}
-          onCanPlay={onCanPlay}
-          onEnded={handleEnded}
-          autoPlay={autoplay}
-          style={{ width: "100%", height: "100%", outline: "none" }}
-          tabIndex={0}
-          onKeyDown={handleKeyDown}
-        >
-          <MediaProvider>
-            {vttUrl && (
-              <Track
-                src={vttUrl}
-                kind="subtitles"
-                label="English"
-                lang="en-US"
-                default
-              />
-            )}
-          </MediaProvider>
-          <DefaultVideoLayout icons={defaultLayoutIcons} />
-        </MediaPlayer>
-      </Box>
 
       {/* Shortcuts Info Modal */}
       {showShortcuts && (
