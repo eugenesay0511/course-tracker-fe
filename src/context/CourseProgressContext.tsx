@@ -204,6 +204,7 @@ export const CourseProgressProvider: React.FC<{
             duration: 0,
             completed: false,
           }),
+          currentTime: 0,
           completed: false,
         },
       },

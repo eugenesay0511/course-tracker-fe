@@ -259,6 +259,7 @@ export const CoursePlayer: React.FC = () => {
           </Box>
         ) : activeVideoId && activeVideo ? (
           <VideoPlayer
+            key={activeVideoId}
             videoId={activeVideoId}
             videoSrc={resolvedVideoSrc}
             subtitleSrc={resolvedSubtitleSrc}

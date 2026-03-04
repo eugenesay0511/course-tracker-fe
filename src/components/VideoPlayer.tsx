@@ -7,6 +7,7 @@ import {
   Info as InfoIcon,
   Close as CloseIcon,
   Keyboard as KeyboardIcon,
+  Replay as RestartIcon,
 } from "@mui/icons-material";
 import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
 import type { VideoProgress } from "../types";
@@ -400,6 +401,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }}
             >
               <InfoIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Restart Video">
+            <IconButton
+              onClick={() => {
+                if (playerRef.current) {
+                  playerRef.current.currentTime = 0;
+                  playerRef.current.play();
+                }
+              }}
+              sx={{
+                bgcolor: "action.hover",
+                "&:hover": {
+                  bgcolor: "action.selected",
+                  color: "primary.main",
+                },
+              }}
+            >
+              <RestartIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title={autoplay ? "Autoplay is on" : "Autoplay is off"}>

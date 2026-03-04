@@ -19,12 +19,14 @@ import {
 import {
   ExpandMore as ExpandMoreIcon,
   PlayCircleOutline as PlayIcon,
+  PlayCircle as InProgressIcon,
   CheckCircle as CheckCircleIcon,
   Clear as ClearIcon,
   AlignHorizontalLeft as LeftIcon,
   AlignHorizontalRight as RightIcon,
 } from "@mui/icons-material";
 import type { VideoProgress, Chapter, Video } from "../types";
+import { formatTime } from "../utils/formatters";
 
 interface CourseOutlineProps {
   data: Chapter[];
@@ -40,6 +42,7 @@ interface VideoListItemProps {
   video: Video;
   isActive: boolean;
   isCompleted: boolean;
+  progress?: VideoProgress;
   onVideoSelect: (video: Video) => void;
   markVideoUncompleted: (videoId: string) => void;
 }
@@ -49,77 +52,112 @@ const VideoListItem = React.memo(
     video,
     isActive,
     isCompleted,
+    progress,
     onVideoSelect,
     markVideoUncompleted,
-  }: VideoListItemProps) => (
-    <ListItem
-      disablePadding
-      secondaryAction={
-        isCompleted ? (
-          <Tooltip title="Mark as unread">
-            <IconButton
-              edge="end"
-              aria-label="mark unread"
-              onClick={(e) => {
-                e.stopPropagation();
-                markVideoUncompleted(video.id);
-              }}
-            >
-              <ClearIcon fontSize="small" sx={{ color: "text.secondary" }} />
-            </IconButton>
-          </Tooltip>
-        ) : null
-      }
-    >
-      <ListItemButton
-        selected={isActive}
-        onClick={() => onVideoSelect(video)}
-        sx={(theme) => ({
-          pl: 4,
-          py: 1.5,
-          "&.Mui-selected": {
-            bgcolor:
-              theme.palette.mode === "dark"
-                ? "rgba(59, 130, 246, 0.15)"
-                : "rgba(37, 99, 235, 0.1)",
-            borderLeft: 4,
-            borderColor: "primary.main",
-            "&:hover": {
+  }: VideoListItemProps) => {
+    const isInProgress = !isCompleted && progress && progress.currentTime > 0;
+
+    return (
+      <ListItem
+        disablePadding
+        secondaryAction={
+          isCompleted ? (
+            <Tooltip title="Mark as unread">
+              <IconButton
+                edge="end"
+                aria-label="mark unread"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markVideoUncompleted(video.id);
+                }}
+              >
+                <ClearIcon fontSize="small" sx={{ color: "text.secondary" }} />
+              </IconButton>
+            </Tooltip>
+          ) : null
+        }
+      >
+        <ListItemButton
+          selected={isActive}
+          onClick={() => onVideoSelect(video)}
+          sx={(theme) => ({
+            pl: 4,
+            py: 1.5,
+            "&.Mui-selected": {
               bgcolor:
                 theme.palette.mode === "dark"
-                  ? "rgba(59, 130, 246, 0.25)"
-                  : "rgba(37, 99, 235, 0.2)",
+                  ? "rgba(59, 130, 246, 0.15)"
+                  : "rgba(37, 99, 235, 0.1)",
+              borderLeft: 4,
+              borderColor: "primary.main",
+              "&:hover": {
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(59, 130, 246, 0.25)"
+                    : "rgba(37, 99, 235, 0.2)",
+              },
             },
-          },
-          borderLeft: "4px solid transparent",
-        })}
-      >
-        <ListItemIcon sx={{ minWidth: 36 }}>
-          {isCompleted ? (
-            <CheckCircleIcon color="secondary" fontSize="small" />
-          ) : (
-            <PlayIcon
-              color={isActive ? "primary" : "action"}
-              fontSize="small"
-            />
-          )}
-        </ListItemIcon>
-        <ListItemText
-          primary={video.title}
-          primaryTypographyProps={{
-            variant: "body2",
-            fontWeight: isActive ? 600 : 400,
-            color: isActive ? "primary.main" : "text.primary",
-            sx: {
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            },
-          }}
-        />
-      </ListItemButton>
-    </ListItem>
-  ),
+            borderLeft: "4px solid transparent",
+          })}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            {isCompleted ? (
+              <CheckCircleIcon color="secondary" fontSize="small" />
+            ) : isInProgress ? (
+              <InProgressIcon
+                color={isActive ? "primary" : "info"}
+                fontSize="small"
+              />
+            ) : (
+              <PlayIcon
+                color={isActive ? "primary" : "action"}
+                fontSize="small"
+              />
+            )}
+          </ListItemIcon>
+          <ListItemText
+            disableTypography
+            primary={
+              <Typography
+                variant="body2"
+                fontWeight={isActive ? 600 : 400}
+                color={isActive ? "primary.main" : "text.primary"}
+                sx={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {video.title}
+              </Typography>
+            }
+            secondary={
+              isInProgress ? (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    display: "block",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    mt: 0.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  Progress: {formatTime(progress.currentTime)}
+                  {progress.duration
+                    ? ` / ${formatTime(progress.duration)}`
+                    : ""}
+                </Typography>
+              ) : null
+            }
+          />
+        </ListItemButton>
+      </ListItem>
+    );
+  },
 );
 
 export const CourseOutline: React.FC<CourseOutlineProps> = ({
@@ -297,6 +335,7 @@ export const CourseOutline: React.FC<CourseOutlineProps> = ({
                       video={video}
                       isActive={isActive}
                       isCompleted={isCompleted}
+                      progress={progress}
                       onVideoSelect={onVideoSelect}
                       markVideoUncompleted={markVideoUncompleted}
                     />

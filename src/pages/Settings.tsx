@@ -113,10 +113,8 @@ export const Settings: React.FC = () => {
           setRootPath(newPath);
           handleSavePath(newPath, scannedData);
 
-          // If we came from the dashboard, go back after success
-          if (searchParams.get("action") === "select-folder") {
-            setTimeout(() => navigate("/"), 500);
-          }
+          // After success, go back to dashboard
+          setTimeout(() => navigate("/"), 500);
         }
       } else {
         alert(
