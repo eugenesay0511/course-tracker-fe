@@ -19,6 +19,7 @@ export interface CourseProgressState {
   videos: Record<string, VideoProgress>;
   settings: {
     videoRootPath: string;
+    autoplay: boolean;
   };
 }
 
@@ -35,6 +36,7 @@ interface CourseProgressContextType {
   markVideoCompleted: (videoId: string) => void;
   markVideoUncompleted: (videoId: string) => void;
   setVideoRootPath: (path: string) => void;
+  setAutoplay: (autoplay: boolean) => void;
   setCourseData: (data: any[]) => void;
   setRootHandle: (handle: FileSystemDirectoryHandle | null) => void;
   requestPermission: () => Promise<boolean>;
@@ -58,7 +60,13 @@ const loadProgress = (): CourseProgressState => {
     if (data) {
       const parsed = JSON.parse(data);
       if (!parsed.settings) {
-        parsed.settings = { videoRootPath: DEFAULT_ROOT_PATH };
+        parsed.settings = {
+          videoRootPath: DEFAULT_ROOT_PATH,
+          autoplay: false,
+        };
+      }
+      if (parsed.settings.autoplay === undefined) {
+        parsed.settings.autoplay = false;
       }
       return {
         lastWatchedVideoId: parsed.lastWatchedVideoId || null,
@@ -72,7 +80,10 @@ const loadProgress = (): CourseProgressState => {
   return {
     lastWatchedVideoId: null,
     videos: {},
-    settings: { videoRootPath: DEFAULT_ROOT_PATH },
+    settings: {
+      videoRootPath: DEFAULT_ROOT_PATH,
+      autoplay: false,
+    },
   };
 };
 
@@ -200,6 +211,13 @@ export const CourseProgressProvider: React.FC<{
     }));
   }, []);
 
+  const setAutoplay = useCallback((autoplay: boolean) => {
+    setProgress((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, autoplay },
+    }));
+  }, []);
+
   const setCourseData = useCallback((data: any[]) => {
     setCourseDataState(data);
   }, []);
@@ -291,6 +309,7 @@ export const CourseProgressProvider: React.FC<{
     markVideoCompleted,
     markVideoUncompleted,
     setVideoRootPath,
+    setAutoplay,
     setCourseData,
     setRootHandle,
     requestPermission,

@@ -14,6 +14,7 @@ import {
   Info as InfoIcon,
   Close as CloseIcon,
   Keyboard as KeyboardIcon,
+  AutoMode as AutoplayIcon,
 } from "@mui/icons-material";
 import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
 import type { VideoProgress } from "../hooks/useCourseProgress";
@@ -48,6 +49,8 @@ interface VideoPlayerProps {
   onPrevious?: () => void;
   hasNext?: boolean;
   hasPrevious?: boolean;
+  autoplay?: boolean;
+  onToggleAutoplay?: (enabled: boolean) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -62,6 +65,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onPrevious,
   hasNext,
   hasPrevious,
+  autoplay = false,
+  onToggleAutoplay,
 }) => {
   const playerRef = useRef<MediaPlayerInstance>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
@@ -167,6 +172,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       updateVideoProgress(videoId, currentTime, duration);
     }
   }, [videoId, updateVideoProgress]);
+
+  const handleEnded = useCallback(() => {
+    if (autoplay && onNext) {
+      onNext();
+    }
+  }, [autoplay, onNext]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const player = playerRef.current;
@@ -286,7 +297,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <Stack
         direction="row"
         justifyContent="space-between"
-        alignItems="flex-start"
+        alignItems="center"
         sx={{ mb: 3 }}
       >
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -331,6 +342,69 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             >
               <InfoIcon />
             </IconButton>
+          </Tooltip>
+          <Tooltip title={autoplay ? "Autoplay is on" : "Autoplay is off"}>
+            <Box
+              onClick={() => onToggleAutoplay?.(!autoplay)}
+              sx={{
+                width: 44,
+                height: 24,
+                borderRadius: 12,
+                bgcolor: autoplay
+                  ? "primary.main"
+                  : "action.disabledBackground",
+                position: "relative",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                display: "flex",
+                alignItems: "center",
+                border: 1,
+                borderColor: autoplay ? "primary.main" : "divider",
+                mr: 1,
+                "&:hover": {
+                  borderColor: "primary.main",
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  bgcolor: "white",
+                  position: "absolute",
+                  left: autoplay ? "calc(100% - 21px)" : "3px",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                }}
+              >
+                {autoplay ? (
+                  <Box
+                    sx={{
+                      width: 0,
+                      height: 0,
+                      borderTop: "3.5px solid transparent",
+                      borderBottom: "3.5px solid transparent",
+                      borderLeft: "6px solid",
+                      borderLeftColor: "primary.main",
+                      ml: 0.3,
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: 5,
+                      height: 5,
+                      bgcolor: "text.disabled",
+                      borderRadius: "50%",
+                    }}
+                  />
+                )}
+              </Box>
+            </Box>
           </Tooltip>
           <Tooltip title="Previous Video">
             <span>
@@ -390,7 +464,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           keyShortcuts={{ seekForward: null, seekBackward: null }}
           onTimeUpdate={handleTimeUpdate}
           onCanPlay={onCanPlay}
-          autoPlay
+          onEnded={handleEnded}
+          autoPlay={autoplay}
           style={{ width: "100%", height: "100%", outline: "none" }}
           tabIndex={0}
           onKeyDown={handleKeyDown}
