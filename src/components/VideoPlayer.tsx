@@ -1,23 +1,48 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { 
-  Box, Typography, IconButton, Tooltip, Stack, 
-  Modal, Backdrop, Fade, Paper, Divider 
-} from '@mui/material';
-import { 
-  NavigateNext as NextIcon, 
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import {
+  Box,
+  Typography,
+  IconButton,
+  Tooltip,
+  Stack,
+  Chip,
+} from "@mui/material";
+import {
+  NavigateNext as NextIcon,
   NavigateBefore as PrevIcon,
+  FolderOpen as ChapterIcon,
   Info as InfoIcon,
   Close as CloseIcon,
-  Keyboard as KeyboardIcon
-} from '@mui/icons-material';
-import type { VideoProgress } from '../hooks/useCourseProgress';
+  Keyboard as KeyboardIcon,
+} from "@mui/icons-material";
+import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
+import type { VideoProgress } from "../hooks/useCourseProgress";
+
+// Vidstack Core Imports
+import "@vidstack/react/player/styles/default/theme.css";
+import "@vidstack/react/player/styles/default/layouts/video.css";
+import {
+  MediaPlayer,
+  MediaProvider,
+  Track,
+  type MediaPlayerInstance,
+} from "@vidstack/react";
+import {
+  defaultLayoutIcons,
+  DefaultVideoLayout,
+} from "@vidstack/react/player/layouts/default";
 
 interface VideoPlayerProps {
   videoId: string;
   videoSrc: string | null;
   subtitleSrc?: string | null;
   title: string;
-  updateVideoProgress: (videoId: string, currentTime: number, duration: number) => void;
+  chapterTitle?: string;
+  updateVideoProgress: (
+    videoId: string,
+    currentTime: number,
+    duration: number,
+  ) => void;
   getProgress: (videoId: string) => VideoProgress | undefined;
   onNext?: () => void;
   onPrevious?: () => void;
@@ -25,47 +50,62 @@ interface VideoPlayerProps {
   hasPrevious?: boolean;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
-  videoId, 
-  videoSrc, 
-  subtitleSrc, 
-  title, 
-  updateVideoProgress, 
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  videoId,
+  videoSrc,
+  subtitleSrc,
+  title,
+  chapterTitle,
+  updateVideoProgress,
   getProgress,
   onNext,
   onPrevious,
   hasNext,
-  hasPrevious
+  hasPrevious,
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<MediaPlayerInstance>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  
+
   // State ref to keep track of the most recent time sent to the hook, to throttle updates
   const lastUpdatedTimeRef = useRef<number>(0);
-
-  const handleLoadedMetadata = () => {
-    const video = videoRef.current;
-    if (video) {
-        const savedProgress = getProgress(videoId);
-        if (savedProgress && savedProgress.currentTime > 0) {
-            const percent = savedProgress.currentTime / (savedProgress.duration || 1);
-            if (percent < 0.99) {
-                video.currentTime = savedProgress.currentTime;
-            } else {
-                video.currentTime = 0;
-            }
-        }
-    }
-  };
+  const playedInitialResumeRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Auto-focus the video so keyboard shortcuts work immediately
-    const video = videoRef.current;
-    if (video) {
-      video.focus();
-    }
+    playedInitialResumeRef.current = false;
   }, [videoId]);
+
+  const onCanPlay = useCallback(() => {
+    const player = playerRef.current;
+    if (player && !playedInitialResumeRef.current) {
+      const savedProgress = getProgress(videoId);
+      if (savedProgress && savedProgress.currentTime > 0) {
+        const percent =
+          savedProgress.currentTime / (savedProgress.duration || 1);
+        if (percent < 0.99) {
+          player.currentTime = savedProgress.currentTime;
+        } else {
+          player.currentTime = 0;
+        }
+      }
+      playedInitialResumeRef.current = true;
+    }
+
+    // Automatically focus the player so keyboard shortcuts work right away
+    if (player) {
+      setTimeout(() => {
+        // Handle varying Vidstack API versions
+        if (
+          (player as any).el &&
+          typeof (player as any).el.focus === "function"
+        ) {
+          (player as any).el.focus();
+        } else if (typeof (player as any).focus === "function") {
+          (player as any).focus();
+        }
+      }, 50);
+    }
+  }, [videoId, getProgress]);
 
   useEffect(() => {
     if (!subtitleSrc) {
@@ -75,100 +115,156 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     // Fetch the SRT file and convert to VTT URL
     fetch(subtitleSrc)
-      .then(res => res.text())
-      .then(srtText => {
+      .then((res) => res.text())
+      .then((srtText) => {
         // Convert SRT to VTT (replace commas with periods in timestamps)
-        const vttText = "WEBVTT\n\n" + srtText.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
-        const blob = new Blob([vttText], { type: 'text/vtt' });
+        const vttText =
+          "WEBVTT\n\n" +
+          srtText.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+        const blob = new Blob([vttText], { type: "text/vtt" });
         const url = URL.createObjectURL(blob);
         setVttUrl(url);
       })
-      .catch(err => console.error("Failed to load subtitles:", err));
+      .catch((err) => console.error("Failed to load subtitles:", err));
 
     return () => {
       // Cleanup previous blob URL
       setVttUrl((oldUrl: string | null) => {
-         if (oldUrl) URL.revokeObjectURL(oldUrl);
-         return null;
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
+        return null;
       });
     };
   }, [subtitleSrc]);
 
-  const handleTimeUpdate = () => {
-    const video = videoRef.current;
-    if (video) {
-        // Throttle updates to every ~1 second to prevent excessive React re-renders and localStorage writes
-        if (Math.abs(video.currentTime - lastUpdatedTimeRef.current) > 1) {
-            lastUpdatedTimeRef.current = video.currentTime;
-            updateVideoProgress(videoId, video.currentTime, video.duration);
+  // Force subtitles to be enabled by default as soon as the VTT URL is ready
+  useEffect(() => {
+    if (vttUrl) {
+      const timer = setTimeout(() => {
+        const player = playerRef.current;
+        if (player && player.textTracks) {
+          const tracks = Array.from(player.textTracks);
+          for (const track of tracks) {
+            if (track && track.kind === "subtitles") {
+              track.mode = "showing";
+            }
+          }
         }
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [vttUrl]);
+
+  const handleTimeUpdate = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    const currentTime = player.state.currentTime;
+    const duration = player.state.duration || 1;
+
+    // Throttle updates to every ~1 second to prevent excessive React re-renders and localStorage writes
+    if (Math.abs(currentTime - lastUpdatedTimeRef.current) > 1) {
+      lastUpdatedTimeRef.current = currentTime;
+      updateVideoProgress(videoId, currentTime, duration);
+    }
+  }, [videoId, updateVideoProgress]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    // Prevent scrolling with keys when interacting with video
-    if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    const player = playerRef.current;
+    if (!player) return;
+    if (
+      [" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+    ) {
       e.preventDefault();
     }
 
     const key = e.key.toLowerCase();
-    
+
     switch (key) {
-      case 'k':
-        if (video.paused) video.play();
-        else video.pause();
+      case " ":
+      case "k":
+        if (player.state.paused) player.play();
+        else player.pause();
         break;
-      case 'f':
-        if (!document.fullscreenElement) {
-          video.requestFullscreen().catch(err => {
+      case "f":
+        if (!player.state.fullscreen) {
+          player.enterFullscreen().catch((err) => {
             console.error(`Fullscreen error: ${err.message}`);
           });
         } else {
-          document.exitFullscreen();
+          player.exitFullscreen();
         }
         break;
-      case 'm':
-        video.muted = !video.muted;
+      case "m":
+        player.muted = !player.state.muted;
         break;
-      case 'l':
-        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+      case "arrowright":
+      case "l":
+        player.currentTime = Math.min(
+          player.state.duration,
+          player.state.currentTime + 5,
+        );
         break;
-      case 'j':
-        video.currentTime = Math.max(0, video.currentTime - 5);
+      case "arrowleft":
+      case "j":
+        player.currentTime = Math.max(0, player.state.currentTime - 5);
         break;
-      case 'arrowup':
-        video.volume = Math.min(1, video.volume + 0.1);
+      case "arrowup":
+        player.volume = Math.min(1, player.state.volume + 0.1);
         break;
-      case 'arrowdown':
-        video.volume = Math.max(0, video.volume - 0.1);
+      case "arrowdown":
+        player.volume = Math.max(0, player.state.volume - 0.1);
         break;
-      case ',':
-      case '<':
+      case ",":
+      case "<":
         if (onPrevious && hasPrevious) onPrevious();
         break;
-      case '.':
-      case '>':
+      case ".":
+      case ">":
         if (onNext && hasNext) onNext();
         break;
-      case '?':
-      case '/':
-        setShowShortcuts(true);
+      case "c":
+        if (player.textTracks) {
+          const tracks = Array.from(player.textTracks);
+          for (const track of tracks) {
+            if (track && track.kind === "subtitles") {
+              track.mode = track.mode === "showing" ? "hidden" : "showing";
+            }
+          }
+        }
+        break;
+      case "?":
+      case "/":
+        setShowShortcuts((prev) => !prev);
         break;
     }
   };
 
-  const ShortcutRow = ({ keys, label }: { keys: string[], label: string }) => (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
-      <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        {keys.map(k => (
-          <Paper key={k} sx={{ 
-            px: 1, py: 0.3, fontSize: '0.75rem', fontWeight: 'bold', 
-            bgcolor: 'action.hover', border: 1, borderColor: 'divider' 
-          }}>
+  const ShortcutRow = ({ keys, label }: { keys: string[]; label: string }) => (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        py: 1,
+      }}
+    >
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Box sx={{ display: "flex", gap: 0.5 }}>
+        {keys.map((k) => (
+          <Paper
+            key={k}
+            sx={{
+              px: 1,
+              py: 0.3,
+              fontSize: "0.75rem",
+              fontWeight: "bold",
+              bgcolor: "action.hover",
+              border: 1,
+              borderColor: "divider",
+            }}
+          >
             {k}
           </Paper>
         ))}
@@ -177,23 +273,76 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.default', p: 3, borderRadius: 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, flexGrow: 1, mr: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {title}
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        bgcolor: "background.default",
+        px: 1,
+        borderRadius: 2,
+      }}
+    >
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        sx={{ mb: 3 }}
+      >
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          {chapterTitle && (
+            <Chip
+              icon={<ChapterIcon sx={{ fontSize: "0.9rem !important" }} />}
+              label={chapterTitle}
+              size="small"
+              variant="outlined"
+              sx={{
+                mb: 1,
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                color: "text.secondary",
+                borderColor: "divider",
+                height: 24,
+                bgcolor: "action.hover",
+                px: 1,
+              }}
+            />
+          )}
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 700, letterSpacing: "-0.5px" }}
+          >
+            {title}
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1.5, ml: 2, alignItems: "center" }}>
           <Tooltip title="View Keyboard Shortcuts">
-            <IconButton size="small" onClick={() => setShowShortcuts(true)} sx={{ color: 'text.secondary' }}>
-              <InfoIcon fontSize="small" />
+            <IconButton
+              onClick={() => setShowShortcuts(true)}
+              sx={{
+                bgcolor: "action.hover",
+                "&:hover": {
+                  bgcolor: "action.selected",
+                  color: "primary.main",
+                },
+              }}
+            >
+              <InfoIcon />
             </IconButton>
           </Tooltip>
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Previous Video">
             <span>
-              <IconButton 
-                onClick={onPrevious} 
+              <IconButton
+                onClick={onPrevious}
                 disabled={!hasPrevious}
-                sx={{ bgcolor: 'action.hover', '&:hover': { bgcolor: 'action.selected' } }}
+                sx={{
+                  bgcolor: "background.paper",
+                  boxShadow: 1,
+                  "&:hover": { bgcolor: "action.selected" },
+                  "&.Mui-disabled": { bgcolor: "transparent", opacity: 0.4 },
+                }}
               >
                 <PrevIcon />
               </IconButton>
@@ -201,10 +350,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </Tooltip>
           <Tooltip title="Next Video">
             <span>
-              <IconButton 
-                onClick={onNext} 
+              <IconButton
+                onClick={onNext}
                 disabled={!hasNext}
-                sx={{ bgcolor: 'action.hover', '&:hover': { bgcolor: 'action.selected' } }}
+                sx={{
+                  bgcolor: "background.paper",
+                  boxShadow: 1,
+                  "&:hover": { bgcolor: "action.selected" },
+                  "&.Mui-disabled": { bgcolor: "transparent", opacity: 0.4 },
+                }}
               >
                 <NextIcon />
               </IconButton>
@@ -212,84 +366,147 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </Tooltip>
         </Box>
       </Stack>
-      <Box sx={{ flexGrow: 1, position: 'relative', bgcolor: 'black', borderRadius: 2, overflow: 'hidden', boxShadow: 3 }}>
-        <video
-          key={videoId}
-          ref={videoRef}
-          src={videoSrc || undefined}
-          controls
-          autoPlay
-          onLoadedMetadata={handleLoadedMetadata}
+      <Box
+        sx={{
+          flexGrow: 1,
+          position: "relative",
+          bgcolor: "black",
+          borderRadius: 3,
+          overflow: "hidden",
+          border: 1,
+          borderColor: "divider",
+          "& video": {
+            objectFit: "contain !important",
+            height: "100% !important",
+            width: "100% !important",
+          },
+        }}
+      >
+        <MediaPlayer
+          ref={playerRef}
+          src={videoSrc ? { src: videoSrc, type: "video/mp4" } : ""}
+          title={title}
+          fullscreenOrientation="none"
+          keyShortcuts={{ seekForward: null, seekBackward: null }}
           onTimeUpdate={handleTimeUpdate}
-          onKeyDown={handleKeyDown}
+          onCanPlay={onCanPlay}
+          autoPlay
+          style={{ width: "100%", height: "100%", outline: "none" }}
           tabIndex={0}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', outline: 'none' }}
+          onKeyDown={handleKeyDown}
         >
-          {vttUrl && <track kind="subtitles" src={vttUrl} srcLang="en" label="English" default />}
-        </video>
+          <MediaProvider>
+            {vttUrl && (
+              <Track
+                src={vttUrl}
+                kind="subtitles"
+                label="English"
+                lang="en-US"
+                default
+              />
+            )}
+          </MediaProvider>
+          <DefaultVideoLayout icons={defaultLayoutIcons} />
+        </MediaPlayer>
       </Box>
 
       {/* Shortcuts Info Modal */}
-      <Modal
-        open={showShortcuts}
-        onClose={() => setShowShortcuts(false)}
-        closeAfterTransition
-        slots={{ backdrop: Backdrop }}
-        slotProps={{
-          backdrop: {
-            timeout: 500,
-            sx: (theme) => ({ backdropFilter: 'blur(4px)', bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)' })
-          }
-        }}
-      >
-        <Fade in={showShortcuts}>
-          <Paper sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 400,
-            bgcolor: 'background.paper',
-            border: 1,
-            borderColor: 'divider',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 4,
-            outline: 'none'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <KeyboardIcon color="primary" />
-                <Typography variant="h6" fontWeight="bold">Keyboard Shortcuts</Typography>
+      {showShortcuts && (
+        <Modal
+          open={showShortcuts}
+          onClose={() => setShowShortcuts(false)}
+          closeAfterTransition
+          slots={{ backdrop: Backdrop }}
+          slotProps={{
+            backdrop: {
+              timeout: 500,
+              sx: (theme) => ({
+                backdropFilter: "blur(4px)",
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(0,0,0,0.8)"
+                    : "rgba(255,255,255,0.8)",
+              }),
+            },
+          }}
+        >
+          <Fade in={showShortcuts}>
+            <Paper
+              onKeyDown={(e) => {
+                if (e.key === "/" || e.key === "?") {
+                  setShowShortcuts(false);
+                }
+              }}
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 400,
+                bgcolor: "background.paper",
+                border: 1,
+                borderColor: "divider",
+                boxShadow: 24,
+                p: 4,
+                borderRadius: 4,
+                outline: "none",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <KeyboardIcon color="primary" />
+                  <Typography variant="h6" fontWeight="bold">
+                    Keyboard Shortcuts
+                  </Typography>
+                </Box>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowShortcuts(false)}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
               </Box>
-              <IconButton size="small" onClick={() => setShowShortcuts(false)}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Box>
-            
-            <Divider sx={{ mb: 2, opacity: 0.1 }} />
-            
-            <Stack spacing={0.5}>
-              <ShortcutRow label="Play / Pause" keys={['Space', 'K']} />
-              <ShortcutRow label="Full Screen" keys={['F']} />
-              <ShortcutRow label="Mute / Unmute" keys={['M']} />
-              <ShortcutRow label="Seek Forward 5s" keys={['→', 'L']} />
-              <ShortcutRow label="Seek Backward 5s" keys={['←', 'J']} />
-              <ShortcutRow label="Increase Volume" keys={['↑']} />
-              <ShortcutRow label="Decrease Volume" keys={['↓']} />
-              <ShortcutRow label="Next Video" keys={['.', '>']} />
-              <ShortcutRow label="Previous Video" keys={[',', '<']} />
-              <ShortcutRow label="Show Shortcuts" keys={['?', '/']} />
-            </Stack>
-            
-            <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
-              <Typography variant="caption" color="text.secondary">
-                Focus the video player to use these shortcuts
-              </Typography>
-            </Box>
-          </Paper>
-        </Fade>
-      </Modal>
+
+              <Divider sx={{ mb: 2, opacity: 0.1 }} />
+
+              <Stack spacing={0.5}>
+                <ShortcutRow label="Play / Pause" keys={["Space", "K"]} />
+                <ShortcutRow label="Full Screen" keys={["F"]} />
+                <ShortcutRow label="Mute / Unmute" keys={["M"]} />
+                <ShortcutRow label="Seek Forward 5s" keys={["→", "L"]} />
+                <ShortcutRow label="Seek Backward 5s" keys={["←", "J"]} />
+                <ShortcutRow label="Increase Volume" keys={["↑"]} />
+                <ShortcutRow label="Decrease Volume" keys={["↓"]} />
+                <ShortcutRow label="Next Video" keys={[".", ">"]} />
+                <ShortcutRow label="Previous Video" keys={[",", "<"]} />
+                <ShortcutRow label="Toggle Subtitles" keys={["C"]} />
+                <ShortcutRow label="Show Shortcuts" keys={["?", "/"]} />
+              </Stack>
+
+              <Box
+                sx={{
+                  mt: 3,
+                  pt: 2,
+                  borderTop: 1,
+                  borderColor: "divider",
+                  textAlign: "center",
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Focus the video player to use these shortcuts
+                </Typography>
+              </Box>
+            </Paper>
+          </Fade>
+        </Modal>
+      )}
     </Box>
   );
 };
