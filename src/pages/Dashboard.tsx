@@ -26,7 +26,6 @@ import {
   AccessTime as ClockIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "@mui/material";
 
 import { useCourseProgress } from "../hooks/useCourseProgress";
 
@@ -38,7 +37,6 @@ export const Dashboard: React.FC = () => {
   } = useCourseProgress() as any;
   const navigate = useNavigate();
   const [selectedChapter, setSelectedChapter] = React.useState<any>(null);
-  const theme = useTheme();
 
   // Calculate statistics
   let totalVideos = 0;
