@@ -14,7 +14,6 @@ import {
   Info as InfoIcon,
   Close as CloseIcon,
   Keyboard as KeyboardIcon,
-  AutoMode as AutoplayIcon,
 } from "@mui/icons-material";
 import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
 import type { VideoProgress } from "../hooks/useCourseProgress";
