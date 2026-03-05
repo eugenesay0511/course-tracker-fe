@@ -5,7 +5,6 @@ import {
   Paper,
   TextField,
   Button,
-  Alert,
   IconButton,
   Snackbar,
   Dialog,
@@ -19,7 +18,6 @@ import {
 import {
   Download as ExportIcon,
   Upload as ImportIcon,
-  Info as InfoIcon,
   CheckCircle as SuccessIcon,
   DeleteForever as DeleteIcon,
   Timer as TimerIcon,
@@ -272,19 +270,6 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
                   Browse
                 </Button>
               </Box>
-
-              <Alert
-                severity="info"
-                icon={<InfoIcon />}
-                sx={{
-                  mt: 3,
-                  borderRadius: 2,
-                  "& .MuiAlert-icon": { alignItems: "center" },
-                }}
-              >
-                For security reasons, your browser requires you to manually
-                select the folder to grant access permissions.
-              </Alert>
             </Paper>
           </Box>
 
