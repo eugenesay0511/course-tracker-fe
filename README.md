@@ -1,14 +1,16 @@
-# Big Brain
+# WatchFlow
 
-A comprehensive, local-first web application built with React, Vite, and Material UI to track your progress through video course materials right from your browser. It scans local folders for video files (`.mp4`) and subtitle files (`.srt`), builds an interactive course outline, and automatically tracks where you left off.
+A comprehensive, local-first web application built with React 19, Vite, and Material UI to track your progress through video course materials right from your browser. It scans local folders for video files (`.mp4`) and subtitle files (`.srt`), builds an interactive course outline, and automatically tracks your learning journey.
 
 ## 🚀 Features
 
-- **Local File Scanning**: Point the app to a local folder and it automatically builds a course curriculum from subfolders (Chapters) and video files. No uploads required!
-- **State Persistence**: The app remembers exactly where you paused each video.
+- **Local File Scanning**: Point the app to a local folder via the File System Access API. It automatically builds a course curriculum from subfolders (Chapters) and video files. No uploads required!
+- **Rich Dashboard**: Visualize your progress with interactive charts, track total learning time, and quickly resume your last watched video.
+- **Study Streaks**: Set a daily watching goal and build your learning streak. The app tracking consecutive days you've reached your target.
+- **Bookmarks & Notes**: Save specific timestamps with notes while watching. Easily search and jump back to key moments from the Bookmarks page.
 - **Smart Completion**: Videos are automatically marked as completed when you reach 95% of the total duration.
-- **Seamless Navigation**: Navigate between sequential videos, even across different chapters.
-- **Data Export & Import**: Backup your learning progress as a JSON file, and restore it on another machine.
+- **Customizable Experience**: Toggle between Light and Dark modes, and choose your preferred Course Outline position (Left or Right).
+- **Data Export & Import**: Backup your learning progress as a JSON file (with automatic timestamps), and restore it on another machine.
 - **Vercel / Cloud Ready**: Fully functional when hosted on platforms like Vercel, bypassing browser security blocks by dynamically requesting permission to read your local files.
 
 ## 🧠 How It Works (Project Logic)
@@ -20,29 +22,26 @@ When a folder is selected, the scanner recursively crawls through the subdirecto
 
 ### 2. Global State Management (`src/context/CourseProgressContext.tsx`)
 
-The app uses React Context to hold its global state, allowing all components to access the user's data without "prop drilling". The state includes:
+The app uses React Context to hold its global state. The state is optimized to prevent unnecessary re-renders and includes:
 
 - **`courseData`**: The generated nested array of Chapters and Videos.
-- **`progress`**: A dictionary tracking the `currentTime`, `duration`, and `completed` status of every video ID.
+- **`progress`**: A dictionary tracking the `currentTime`, `duration`, `completed` status, `bookmarks`, and `dailyWatchLog`.
 - **`rootHandle`**: The browser's active security permission object (`FileSystemDirectoryHandle`) that allows reading the course folder.
 
 ### 3. Data Persistence (`localStorage` & `IndexedDB`)
 
 To ensure you never lose your progress when you close the tab:
 
-- **Watch Progress**: The `progress` and `courseData` objects are serialized into standard strings and saved in `localStorage`.
-- **Security Permissions**: The browser's `rootHandle` is a complex object that cannot be saved as text. Instead, it is saved in **IndexedDB** (`src/utils/idb.ts`), a powerful browser-native database.
+- **Watch Progress & Settings**: The `progress` and `courseData` objects are serialized and saved in `localStorage`.
+- **Security Permissions**: The browser's `rootHandle` is saved in **IndexedDB** (`src/utils/idb.ts`). This allows the app to remember the folder across sessions.
 
 ### 4. Local File Playback (`src/pages/CoursePlayer.tsx`)
 
-Running a website on the internet (like Vercel) while trying to play a video file on your `C:/` drive is usually blocked by strict browser security rules (CORS / Mixed Content).
-To solve this:
+Playing local files from a web context is usually blocked by security rules. WatchFlow solves this:
 
-- When you select a folder, the App gets a `FileSystemDirectoryHandle`.
-- The `CoursePlayer` uses this handle to locate the specific `.mp4` file and creates a **Temporary Web URL** (`blob:http://...`) using `URL.createObjectURL(file)`. This creates a secure sandbox link the `<video>` tag can legally play.
-- **The "Restore Access" Catch**: For security, browsers wipe file permissions when you refresh the page. However, because we saved the handle in IndexedDB, the app remembers the folder. It will show a "Restore Access" overlay. When the user clicks the button, the app asks the browser to renew the permission with a single click, instantly unlocking the videos again.
-
-_(Fallback)_: If running on a local Vite server (`npm run dev`), the app can fallback to requesting files directly through Vite's `/@fs/C:/...` proxy structure.
+- **Blob URLs**: When you select a folder, the App gets a `FileSystemDirectoryHandle`. The `CoursePlayer` uses this to create **Temporary Web URLs** (`blob:http://...`) using `URL.createObjectURL(file)`.
+- **Permission Restoration**: Browsers wipe file permissions on refresh. WatchFlow detects this and shows a "Restore Access" overlay, allowing you to re-grant permission with a single click.
+- **Prefetching**: The player automatically prefetches the next and previous video blobs for instant, gapless navigation.
 
 ## 🛠️ Setup & Installation
 
@@ -66,17 +65,17 @@ npm run dev
 ```
 
 3. **Configure Your Course**
-   - Open `http://localhost:5173`.
+   - Open the app in your browser.
    - Navigate to the **Settings** page.
-   - Click **Select Folder** and select the root directory of your video course on your computer.
-   - _(Optional)_ You can also paste your absolute folder path into the text field, but it is no longer required for playback.
-   - Go to the **Course Player** and start learning!
+   - Click **Select Folder** and select the root directory of your video course.
+   - Set your **Daily Study Goal** to start tracking your streak.
 
 ## 📦 Tech Stack
 
-- React 19
-- React Router DOM v7
-- Vite
-- Material UI (MUI) v7
-- File System Access API
-- IndexedDB
+- **React 19**: Modern UI development.
+- **Vite**: Ultra-fast build tool and dev server.
+- **Material UI (MUI) v7**: Premium, responsive component library.
+- **MUI X Charts**: Interactive progress visualization.
+- **Vidstack**: High-performance video player framework.
+- **File System Access API**: Secure local file interaction.
+- **IndexedDB**: Persistent storage for file handles.
