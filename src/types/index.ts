@@ -38,6 +38,7 @@ export interface Settings {
   autoplay: boolean;
   outlinePosition: "left" | "right";
   dailyGoalMinutes: number;
+  playbackSpeed: number;
 }
 
 export interface CourseProgressState {

@@ -22,6 +22,7 @@ const defaultProgress: CourseProgressState = {
     autoplay: false,
     outlinePosition: "left",
     dailyGoalMinutes: 30,
+    playbackSpeed: 1,
   },
   bookmarks: [],
   dailyWatchLog: [],
@@ -155,6 +156,13 @@ export const dailyGoalMinutesAtom = atom(
   (get) => get(settingsAtom).dailyGoalMinutes,
   (_, set, dailyGoalMinutes: number) => {
     set(settingsAtom, { dailyGoalMinutes });
+  }
+);
+
+export const playbackSpeedAtom = atom(
+  (get) => get(settingsAtom).playbackSpeed,
+  (_, set, playbackSpeed: number) => {
+    set(settingsAtom, { playbackSpeed });
   }
 );
 

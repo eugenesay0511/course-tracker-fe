@@ -21,6 +21,7 @@ export const CoursePlayer: React.FC = () => {
     setOutlinePosition,
     addBookmark,
     removeBookmark,
+    setPlaybackSpeed,
   } = useCourseProgress() as any;
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string | null>(null);
@@ -333,6 +334,8 @@ export const CoursePlayer: React.FC = () => {
             bookmarks={progress.bookmarks || []}
             onAddBookmark={addBookmark}
             onRemoveBookmark={removeBookmark}
+            playbackSpeed={progress.settings?.playbackSpeed ?? 1}
+            onChangePlaybackSpeed={setPlaybackSpeed}
           />
         ) : (
           <Box

@@ -9,6 +9,7 @@ import {
   autoplayAtom,
   outlinePositionAtom,
   dailyGoalMinutesAtom,
+  playbackSpeedAtom,
   updateVideoProgressAtom,
   markVideoCompletedAtom,
   markVideoUncompletedAtom,
@@ -29,6 +30,7 @@ export const useCourseProgress = () => {
   const setAutoplay = useSetAtom(autoplayAtom);
   const setOutlinePosition = useSetAtom(outlinePositionAtom);
   const setDailyGoal = useSetAtom(dailyGoalMinutesAtom);
+  const setPlaybackSpeed = useSetAtom(playbackSpeedAtom);
 
   const updateVideoProgressAtomFn = useSetAtom(updateVideoProgressAtom);
   const markVideoCompletedAtomFn = useSetAtom(markVideoCompletedAtom);
@@ -179,5 +181,6 @@ export const useCourseProgress = () => {
     removeBookmark,
     updateBookmark,
     setDailyGoal,
+    setPlaybackSpeed,
   };
 };

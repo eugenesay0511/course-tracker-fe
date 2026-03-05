@@ -49,6 +49,8 @@ interface VideoPlayerProps {
   bookmarks?: Bookmark[];
   onAddBookmark?: (videoId: string, timestamp: number, note: string) => void;
   onRemoveBookmark?: (bookmarkId: string) => void;
+  playbackSpeed?: number;
+  onChangePlaybackSpeed?: (speed: number) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -69,10 +71,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   bookmarks = [],
   onAddBookmark,
   onRemoveBookmark,
+  playbackSpeed = 1,
+  onChangePlaybackSpeed,
 }) => {
   const playerRef = useRef<MediaPlayerInstance>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+  // Sync playback rate when speed or video changes
+  useEffect(() => {
+    const player = playerRef.current;
+    if (player) {
+      player.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed, videoId]);
 
   // State ref to keep track of the most recent time sent to the hook, to throttle updates
   const lastUpdatedTimeRef = useRef<number>(0);
@@ -103,6 +117,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       playedInitialResumeRef.current = true;
     }
 
+    // Apply persisted playback speed when the new video is ready
+    // Use a small delay because Vidstack may reset playbackRate during its own init
+    if (player) {
+      setTimeout(() => {
+        if (playerRef.current) {
+          playerRef.current.playbackRate = playbackSpeed;
+        }
+      }, 100);
+    }
+
     // Automatically focus the player so keyboard shortcuts work right away
     if (player) {
       setTimeout(() => {
@@ -117,7 +141,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       }, 50);
     }
-  }, [videoId, getProgress, initialSeekTime]);
+  }, [videoId, getProgress, initialSeekTime, playbackSpeed]);
+
+  // Also apply speed whenever playback actually starts (most reliable)
+  const handlePlaying = useCallback(() => {
+    const player = playerRef.current;
+    if (player && player.playbackRate !== playbackSpeed) {
+      player.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
 
   useEffect(() => {
     if (!subtitleSrc) {
@@ -259,6 +291,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       case "/":
         setShowShortcuts((prev) => !prev);
         break;
+      case "+":
+      case "=": {
+        const nextSpeed = Math.min(
+          3,
+          Math.round((playbackSpeed + 0.25) * 100) / 100,
+        );
+        onChangePlaybackSpeed?.(nextSpeed);
+        const p = playerRef.current;
+        if (p) p.playbackRate = nextSpeed;
+        break;
+      }
+      case "-": {
+        const nextSpeed = Math.max(
+          0.25,
+          Math.round((playbackSpeed - 0.25) * 100) / 100,
+        );
+        onChangePlaybackSpeed?.(nextSpeed);
+        const p = playerRef.current;
+        if (p) p.playbackRate = nextSpeed;
+        break;
+      }
     }
   };
 
@@ -331,6 +384,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           keyShortcuts={{ seekForward: null, seekBackward: null }}
           onTimeUpdate={handleTimeUpdate}
           onCanPlay={onCanPlay}
+          onPlaying={handlePlaying}
           onEnded={handleEnded}
           autoPlay={autoplay}
           style={{ width: "100%", height: "100%", outline: "none" }}
@@ -451,6 +505,44 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }}
             >
               <RestartIcon />
+            </IconButton>
+          </Tooltip>
+          {/* Speed selector */}
+          <Tooltip title={`Playback Speed: ${playbackSpeed}x`}>
+            <IconButton
+              onClick={() => {
+                const idx = SPEED_OPTIONS.indexOf(playbackSpeed);
+                const nextIdx =
+                  idx === -1
+                    ? SPEED_OPTIONS.indexOf(1)
+                    : (idx + 1) % SPEED_OPTIONS.length;
+                const nextSpeed = SPEED_OPTIONS[nextIdx];
+                onChangePlaybackSpeed?.(nextSpeed);
+                const p = playerRef.current;
+                if (p) p.playbackRate = nextSpeed;
+              }}
+              sx={{
+                bgcolor: playbackSpeed !== 1 ? "primary.main" : "action.hover",
+                color:
+                  playbackSpeed !== 1 ? "primary.contrastText" : "text.primary",
+                "&:hover": {
+                  bgcolor:
+                    playbackSpeed !== 1 ? "primary.dark" : "action.selected",
+                },
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                minWidth: 40,
+                height: 36,
+                borderRadius: 2,
+              }}
+            >
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                sx={{ fontSize: "0.8rem" }}
+              >
+                {playbackSpeed}x
+              </Typography>
             </IconButton>
           </Tooltip>
           <Tooltip title={autoplay ? "Autoplay is on" : "Autoplay is off"}>
@@ -628,6 +720,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <ShortcutRow label="Next Video" keys={[".", ">"]} />
                 <ShortcutRow label="Previous Video" keys={[",", "<"]} />
                 <ShortcutRow label="Toggle Subtitles" keys={["C"]} />
+                <ShortcutRow label="Speed Up" keys={["+"]} />
+                <ShortcutRow label="Speed Down" keys={["-"]} />
                 <ShortcutRow label="Show Shortcuts" keys={["?", "/"]} />
               </Stack>
 
