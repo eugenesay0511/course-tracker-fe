@@ -10,6 +10,7 @@ A comprehensive, local-first web application built with React 19, Vite, and Mate
 - **Bookmarks & Notes**: Save specific timestamps with notes while watching. Easily search and jump back to key moments from the Bookmarks page.
 - **Smart Completion**: Videos are automatically marked as completed when you reach 95% of the total duration.
 - **Customizable Experience**: Toggle between Light and Dark modes, and choose your preferred Course Outline position (Left or Right).
+- **Playback Speed Control**: Adjust video playback speed (0.5x–2x) with a single click or keyboard shortcuts (`+`/`-`). Your preferred speed persists across videos and sessions.
 - **Settings Dialog**: Manage your course path, study goals, and data export/import through a polished, compact preferences window.
 - **Data Export & Import**: Backup your learning progress as a JSON file (with automatic date/time stamps), and restore it on another machine.
 - **Performance Optimized**: Built with atomic state management to ensure smooth video playback and zero UI jank.

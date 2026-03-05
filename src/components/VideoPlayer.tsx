@@ -461,7 +461,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </>
           )}
         </Box>
-        <Box sx={{ display: "flex", gap: 1.5, ml: 2, alignItems: "center" }}>
+        <Box sx={{ display: "flex", gap: 1, ml: 2, alignItems: "center" }}>
+          {/* Bookmarks */}
           {onAddBookmark && onRemoveBookmark && (
             <BookmarksPanel
               videoId={videoId}
@@ -474,40 +475,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }}
             />
           )}
-          <Tooltip title="View Keyboard Shortcuts">
-            <IconButton
-              onClick={() => setShowShortcuts(true)}
-              sx={{
-                bgcolor: "action.hover",
-                "&:hover": {
-                  bgcolor: "action.selected",
-                  color: "primary.main",
-                },
-              }}
-            >
-              <InfoIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Restart Video">
-            <IconButton
-              onClick={() => {
-                if (playerRef.current) {
-                  playerRef.current.currentTime = 0;
-                  playerRef.current.play();
-                }
-              }}
-              sx={{
-                bgcolor: "action.hover",
-                "&:hover": {
-                  bgcolor: "action.selected",
-                  color: "primary.main",
-                },
-              }}
-            >
-              <RestartIcon />
-            </IconButton>
-          </Tooltip>
-          {/* Speed selector */}
+          {/* Speed */}
           <Tooltip title={`Playback Speed: ${playbackSpeed}x`}>
             <IconButton
               onClick={() => {
@@ -521,6 +489,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 const p = playerRef.current;
                 if (p) p.playbackRate = nextSpeed;
               }}
+              size="small"
               sx={{
                 bgcolor: playbackSpeed !== 1 ? "primary.main" : "action.hover",
                 color:
@@ -529,22 +498,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   bgcolor:
                     playbackSpeed !== 1 ? "primary.dark" : "action.selected",
                 },
-                fontSize: "0.75rem",
-                fontWeight: "bold",
-                minWidth: 40,
-                height: 36,
                 borderRadius: 2,
+                minWidth: 38,
+                height: 34,
+                px: 1,
               }}
             >
               <Typography
                 variant="caption"
                 fontWeight="bold"
-                sx={{ fontSize: "0.8rem" }}
+                sx={{ fontSize: "0.8rem", lineHeight: 1 }}
               >
                 {playbackSpeed}x
               </Typography>
             </IconButton>
           </Tooltip>
+          {/* Autoplay */}
           <Tooltip title={autoplay ? "Autoplay is on" : "Autoplay is off"}>
             <Box
               onClick={() => onToggleAutoplay?.(!autoplay)}
@@ -562,10 +531,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 alignItems: "center",
                 border: 1,
                 borderColor: autoplay ? "primary.main" : "divider",
-                mr: 1,
-                "&:hover": {
-                  borderColor: "primary.main",
-                },
+                "&:hover": { borderColor: "primary.main" },
               }}
             >
               <Box
@@ -608,37 +574,86 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </Box>
             </Box>
           </Tooltip>
+          {/* Restart */}
+          <Tooltip title="Restart Video">
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (playerRef.current) {
+                  playerRef.current.currentTime = 0;
+                  playerRef.current.play();
+                }
+              }}
+              sx={{
+                bgcolor: "action.hover",
+                borderRadius: 2,
+                "&:hover": {
+                  bgcolor: "action.selected",
+                  color: "primary.main",
+                },
+              }}
+            >
+              <RestartIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {/* Previous */}
           <Tooltip title="Previous Video">
             <span>
               <IconButton
+                size="small"
                 onClick={onPrevious}
                 disabled={!hasPrevious}
                 sx={{
-                  bgcolor: "background.paper",
-                  boxShadow: 1,
-                  "&:hover": { bgcolor: "action.selected" },
-                  "&.Mui-disabled": { bgcolor: "transparent", opacity: 0.4 },
+                  bgcolor: "action.hover",
+                  borderRadius: 2,
+                  "&:hover": {
+                    bgcolor: "action.selected",
+                    color: "primary.main",
+                  },
+                  "&.Mui-disabled": { bgcolor: "transparent", opacity: 0.3 },
                 }}
               >
-                <PrevIcon />
+                <PrevIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
+          {/* Next */}
           <Tooltip title="Next Video">
             <span>
               <IconButton
+                size="small"
                 onClick={onNext}
                 disabled={!hasNext}
                 sx={{
-                  bgcolor: "background.paper",
-                  boxShadow: 1,
-                  "&:hover": { bgcolor: "action.selected" },
-                  "&.Mui-disabled": { bgcolor: "transparent", opacity: 0.4 },
+                  bgcolor: "action.hover",
+                  borderRadius: 2,
+                  "&:hover": {
+                    bgcolor: "action.selected",
+                    color: "primary.main",
+                  },
+                  "&.Mui-disabled": { bgcolor: "transparent", opacity: 0.3 },
                 }}
               >
-                <NextIcon />
+                <NextIcon fontSize="small" />
               </IconButton>
             </span>
+          </Tooltip>
+          {/* Shortcuts */}
+          <Tooltip title="View Keyboard Shortcuts">
+            <IconButton
+              size="small"
+              onClick={() => setShowShortcuts(true)}
+              sx={{
+                bgcolor: "action.hover",
+                borderRadius: 2,
+                "&:hover": {
+                  bgcolor: "action.selected",
+                  color: "primary.main",
+                },
+              }}
+            >
+              <InfoIcon fontSize="small" />
+            </IconButton>
           </Tooltip>
         </Box>
       </Stack>
