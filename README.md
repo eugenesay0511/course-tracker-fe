@@ -7,7 +7,7 @@ A comprehensive, local-first web application built with React 19, Vite, and Mate
 - **Local File Scanning**: Point the app to a local folder via the File System Access API. It automatically builds a course curriculum from subfolders (Chapters) and video files. No uploads required!
 - **Rich Dashboard**: Visualize your progress with interactive charts, track total learning time, and quickly resume your last watched video.
 - **Study Streaks**: Set a daily watching goal and build your learning streak. The app tracking consecutive days you've reached your target.
-- **Bookmarks & Notes**: Save specific timestamps with notes while watching. Easily search and jump back to key moments from the Bookmarks page.
+- **Bookmarks & Notes**: Save specific timestamps with notes while watching using keyboard shortcut **'B'**. Easily search and jump back to key moments from the Bookmarks page.
 - **Smart Completion**: Videos are automatically marked as completed when you reach 95% of the total duration.
 - **Customizable Experience**: Toggle between Light and Dark modes, and choose your preferred Course Outline position (Left or Right).
 - **Playback Speed Control**: Adjust video playback speed (0.5x–2x) with a single click or keyboard shortcuts (`+`/`-`). Your preferred speed persists across videos and sessions.
@@ -37,8 +37,9 @@ This ensures that high-frequency updates (like the video progress updating every
 
 To ensure you never lose your progress when you close the tab:
 
-- **Watch Progress, Settings & Theme**: Utilizing Jotai's `atomWithStorage`, these objects are automatically serialized and saved in `localStorage`.
-- **Security Permissions**: The browser's `rootHandle` is saved in **IndexedDB** (`src/utils/idb.ts`) via a dedicated initializer on app mount. This allows the app to remember and restore the folder across sessions.
+- **Watch Progress & Course Data**: Stored in **IndexedDB** (`src/utils/idb.ts`) to handle high-frequency updates and bypass `localStorage` size limits. This ensures video progress saves are asynchronous and non-blocking.
+- **Settings & Theme**: Small, stable preferences (like Light/Dark mode and autoplay) are kept in **localStorage** for instant access on startup.
+- **Security Permissions**: The browser's `rootHandle` is saved in **IndexedDB**. This allows the app to remember and restore access to your local folders across sessions.
 
 ### 4. Local File Playback (`src/pages/CoursePlayer.tsx`)
 

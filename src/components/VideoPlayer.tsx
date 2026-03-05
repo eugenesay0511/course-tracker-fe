@@ -11,7 +11,7 @@ import {
 } from "@mui/icons-material";
 import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
 import type { VideoProgress, Bookmark } from "../types";
-import { BookmarksPanel } from "./BookmarksPanel";
+import { BookmarksPanel, type BookmarksPanelHandle } from "./BookmarksPanel";
 
 // Vidstack Core Imports
 import "@vidstack/react/player/styles/default/theme.css";
@@ -75,6 +75,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onChangePlaybackSpeed,
 }) => {
   const playerRef = useRef<MediaPlayerInstance>(null);
+  const bookmarksRef = useRef<BookmarksPanelHandle>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -251,6 +252,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         break;
       case "m":
         player.muted = !player.state.muted;
+        break;
+      case "b":
+        e.preventDefault();
+        bookmarksRef.current?.triggerOpen();
         break;
       case "arrowright":
       case "l":
@@ -465,6 +470,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {/* Bookmarks */}
           {onAddBookmark && onRemoveBookmark && (
             <BookmarksPanel
+              ref={bookmarksRef}
               videoId={videoId}
               bookmarks={bookmarks}
               getCurrentTime={() => playerRef.current?.state.currentTime ?? 0}
@@ -728,6 +734,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <ShortcutRow label="Play / Pause" keys={["Space", "K"]} />
                 <ShortcutRow label="Full Screen" keys={["F"]} />
                 <ShortcutRow label="Mute / Unmute" keys={["M"]} />
+                <ShortcutRow label="Add Bookmark" keys={["B"]} />
                 <ShortcutRow label="Seek Forward 5s" keys={["→", "L"]} />
                 <ShortcutRow label="Seek Backward 5s" keys={["←", "J"]} />
                 <ShortcutRow label="Increase Volume" keys={["↑"]} />

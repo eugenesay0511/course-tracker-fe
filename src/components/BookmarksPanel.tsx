@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Box,
   Typography,
@@ -29,152 +29,173 @@ interface BookmarksPanelProps {
   onSeek: (timestamp: number) => void;
 }
 
-export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
-  videoId,
-  bookmarks,
-  getCurrentTime,
-  onAddBookmark,
-  onRemoveBookmark,
-  onSeek,
-}) => {
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [note, setNote] = useState("");
-  const [snapshotTime, setSnapshotTime] = useState(0);
+export interface BookmarksPanelHandle {
+  triggerOpen: () => void;
+}
 
-  const videoBookmarks = bookmarks
-    .filter((b) => b.videoId === videoId)
-    .sort((a, b) => a.timestamp - b.timestamp);
+export const BookmarksPanel = forwardRef<
+  BookmarksPanelHandle,
+  BookmarksPanelProps
+>(
+  (
+    {
+      videoId,
+      bookmarks,
+      getCurrentTime,
+      onAddBookmark,
+      onRemoveBookmark,
+      onSeek,
+    },
+    ref,
+  ) => {
+    const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [note, setNote] = useState("");
+    const [snapshotTime, setSnapshotTime] = useState(0);
 
-  const handleAdd = () => {
-    onAddBookmark(videoId, snapshotTime, note.trim() || "Bookmark");
-    setNote("");
-    setAnchorEl(null);
-  };
+    const videoBookmarks = bookmarks
+      .filter((b) => b.videoId === videoId)
+      .sort((a, b) => a.timestamp - b.timestamp);
 
-  const open = Boolean(anchorEl);
+    useImperativeHandle(ref, () => ({
+      triggerOpen: () => {
+        setSnapshotTime(getCurrentTime());
+        setAnchorEl(buttonRef.current);
+      },
+    }));
 
-  return (
-    <>
-      <Tooltip title="Add Bookmark">
-        <IconButton
-          onClick={(e) => {
-            setSnapshotTime(getCurrentTime());
-            setAnchorEl(e.currentTarget);
-          }}
-          color="primary"
-          size="small"
-        >
-          <BookmarkAddIcon />
-        </IconButton>
-      </Tooltip>
+    const handleAdd = () => {
+      onAddBookmark(videoId, snapshotTime, note.trim() || "Bookmark");
+      setNote("");
+      setAnchorEl(null);
+    };
 
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        transformOrigin={{ vertical: "top", horizontal: "center" }}
-        slotProps={{
-          paper: {
-            sx: {
-              p: 2,
-              width: 320,
-              borderRadius: 3,
-              boxShadow: (theme) =>
-                theme.palette.mode === "dark"
-                  ? "0 12px 40px rgba(0,0,0,0.5)"
-                  : "0 12px 40px rgba(148, 163, 184, 0.25)",
+    const open = Boolean(anchorEl);
+
+    return (
+      <>
+        <Tooltip title="Add Bookmark">
+          <IconButton
+            ref={buttonRef}
+            onClick={(e) => {
+              setSnapshotTime(getCurrentTime());
+              setAnchorEl(e.currentTarget);
+            }}
+            color="primary"
+            size="small"
+          >
+            <BookmarkAddIcon />
+          </IconButton>
+        </Tooltip>
+
+        <Popover
+          open={open}
+          anchorEl={anchorEl}
+          onClose={() => setAnchorEl(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          transformOrigin={{ vertical: "top", horizontal: "center" }}
+          slotProps={{
+            paper: {
+              sx: {
+                p: 2,
+                width: 320,
+                borderRadius: 3,
+                boxShadow: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "0 12px 40px rgba(0,0,0,0.5)"
+                    : "0 12px 40px rgba(148, 163, 184, 0.25)",
+              },
             },
-          },
-        }}
-      >
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
-          Bookmark at {formatTime(snapshotTime)}
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Add a note (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          autoFocus
-          sx={{ mb: 1.5 }}
-        />
-        <Button
-          fullWidth
-          variant="contained"
-          size="small"
-          onClick={handleAdd}
-          sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          }}
         >
-          Save Bookmark
-        </Button>
+          <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+            Bookmark at {formatTime(snapshotTime)}
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Add a note (optional)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            autoFocus
+            sx={{ mb: 1.5 }}
+          />
+          <Button
+            fullWidth
+            variant="contained"
+            size="small"
+            onClick={handleAdd}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            Save Bookmark
+          </Button>
 
-        {videoBookmarks.length > 0 && (
-          <Box sx={{ mt: 2, maxHeight: 200, overflowY: "auto" }}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                mb: 0.5,
-                display: "block",
-              }}
-            >
-              Bookmarks in this video
-            </Typography>
-            <List dense disablePadding>
-              {videoBookmarks.map((bm) => (
-                <ListItem
-                  key={bm.id}
-                  sx={{
-                    borderRadius: 1,
-                    cursor: "pointer",
-                    "&:hover": { bgcolor: "action.hover" },
-                    px: 1,
-                  }}
-                  onClick={() => onSeek(bm.timestamp)}
-                >
-                  <Chip
-                    label={formatTime(bm.timestamp)}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
+          {videoBookmarks.length > 0 && (
+            <Box sx={{ mt: 2, maxHeight: 200, overflowY: "auto" }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  mb: 0.5,
+                  display: "block",
+                }}
+              >
+                Bookmarks in this video
+              </Typography>
+              <List dense disablePadding>
+                {videoBookmarks.map((bm) => (
+                  <ListItem
+                    key={bm.id}
                     sx={{
-                      mr: 1,
-                      minWidth: 52,
-                      fontWeight: 600,
-                      fontSize: "0.7rem",
+                      borderRadius: 1,
+                      cursor: "pointer",
+                      "&:hover": { bgcolor: "action.hover" },
+                      px: 1,
                     }}
-                  />
-                  <ListItemText
-                    primary={bm.note}
-                    primaryTypographyProps={{
-                      variant: "body2",
-                      noWrap: true,
-                      sx: { maxWidth: 150 },
-                    }}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
+                    onClick={() => onSeek(bm.timestamp)}
+                  >
+                    <Chip
+                      label={formatTime(bm.timestamp)}
                       size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveBookmark(bm.id);
+                      color="primary"
+                      variant="outlined"
+                      sx={{
+                        mr: 1,
+                        minWidth: 52,
+                        fontWeight: 600,
+                        fontSize: "0.7rem",
                       }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        )}
-      </Popover>
-    </>
-  );
-};
+                    />
+                    <ListItemText
+                      primary={bm.note}
+                      primaryTypographyProps={{
+                        variant: "body2",
+                        noWrap: true,
+                        sx: { maxWidth: 150 },
+                      }}
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveBookmark(bm.id);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+        </Popover>
+      </>
+    );
+  },
+);
