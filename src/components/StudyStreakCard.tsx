@@ -5,7 +5,6 @@ import {
   Typography,
   Box,
   LinearProgress,
-  Grid,
 } from "@mui/material";
 import {
   LocalFireDepartment as FireIcon,
@@ -78,6 +77,9 @@ export const StudyStreakCard: React.FC = () => {
   return (
     <Card
       sx={(theme) => ({
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         background:
           theme.palette.mode === "dark"
             ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
@@ -91,7 +93,14 @@ export const StudyStreakCard: React.FC = () => {
         borderRadius: 4,
       })}
     >
-      <CardContent sx={{ p: 3 }}>
+      <CardContent
+        sx={{
+          p: 3,
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Typography
           variant="subtitle2"
           color="primary.main"
@@ -102,113 +111,144 @@ export const StudyStreakCard: React.FC = () => {
             gap: 1,
             textTransform: "uppercase",
             letterSpacing: 1,
-            mb: 2,
+            mb: 3,
           }}
         >
           <TrendingIcon sx={{ fontSize: 18 }} />
           Study Streak
         </Typography>
 
-        <Grid container spacing={3}>
-          {/* Streak count */}
-          <Grid size={{ xs: 12, sm: 4 }}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          {/* Main Streak Display */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 3,
+              mb: 3,
+              mt: 1,
+            }}
+          >
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: streak > 0 ? "rgba(239, 68, 68, 0.1)" : "action.hover",
+                border: 2,
+                borderColor: streak > 0 ? "#ef4444" : "divider",
+                flexShrink: 0,
+              }}
+            >
+              <FireIcon
+                sx={{
+                  fontSize: 40,
+                  color: streak > 0 ? "#ef4444" : "text.disabled",
+                }}
+              />
+            </Box>
             <Box
               sx={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                py: 1,
               }}
             >
-              <Box
-                sx={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor:
-                    streak > 0 ? "rgba(239, 68, 68, 0.1)" : "action.hover",
-                  border: 2,
-                  borderColor: streak > 0 ? "#ef4444" : "divider",
-                  mb: 1,
-                }}
+              <Typography
+                variant="h3"
+                fontWeight={900}
+                sx={{ lineHeight: 1.1 }}
               >
-                <FireIcon
-                  sx={{
-                    fontSize: 36,
-                    color: streak > 0 ? "#ef4444" : "text.disabled",
-                  }}
-                />
-              </Box>
-              <Typography variant="h4" fontWeight={900}>
                 {streak}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {streak === 1 ? "day streak" : "day streak"}
+              <Typography
+                variant="subtitle1"
+                color="text.secondary"
+                fontWeight="bold"
+              >
+                {streak === 1 ? "Day Streak" : "Day Streak"}
               </Typography>
             </Box>
-          </Grid>
+          </Box>
 
-          {/* Today's progress */}
-          <Grid size={{ xs: 12, sm: 8 }}>
-            <Box sx={{ mb: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 0.5,
-                }}
+          {/* Today's Progress */}
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                mb: 0.5,
+              }}
+            >
+              <Typography variant="body2" fontWeight={600}>
+                Today's Progress
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                color={goalReached ? "success.main" : "text.primary"}
               >
-                <Typography variant="body2" fontWeight={600}>
-                  Today's Progress
-                </Typography>
-                <Typography
-                  variant="body2"
-                  fontWeight={700}
-                  color={goalReached ? "success.main" : "text.primary"}
-                >
-                  {formatDuration(todaySeconds)} / {dailyGoal}m
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={todayPercent}
-                sx={{
-                  height: 10,
-                  borderRadius: 5,
-                  bgcolor: "action.hover",
-                  "& .MuiLinearProgress-bar": {
-                    borderRadius: 5,
-                    background: goalReached
-                      ? "linear-gradient(90deg, #10b981, #34d399)"
-                      : "linear-gradient(90deg, #3b82f6, #60a5fa)",
-                  },
-                }}
-              />
+                {formatDuration(todaySeconds)} / {dailyGoal}m
+              </Typography>
             </Box>
+            <LinearProgress
+              variant="determinate"
+              value={todayPercent}
+              sx={{
+                height: 10,
+                borderRadius: 5,
+                bgcolor: "action.hover",
+                "& .MuiLinearProgress-bar": {
+                  borderRadius: 5,
+                  background: goalReached
+                    ? "linear-gradient(90deg, #10b981, #34d399)"
+                    : "linear-gradient(90deg, #3b82f6, #60a5fa)",
+                },
+              }}
+            />
+          </Box>
 
-            {/* Last 7 days mini chart */}
+          {/* Last 7 Days Mini Chart */}
+          <Box>
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ mb: 1, display: "block" }}
+              fontWeight="bold"
+              sx={{
+                mb: 1.5,
+                display: "block",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
             >
-              Last 7 days
+              Last 7 Days
             </Typography>
             <Box
               sx={{
                 display: "flex",
-                gap: 0.8,
+                gap: 1,
                 alignItems: "flex-end",
-                height: 48,
+                height: 40,
+                mt: 1,
+                mb: 2,
               }}
             >
               {last7Days.map((day) => {
                 const height =
                   maxSecondsInWeek > 0
-                    ? Math.max(4, (day.seconds / maxSecondsInWeek) * 48)
+                    ? Math.max(4, (day.seconds / maxSecondsInWeek) * 40)
                     : 4;
                 return (
                   <Box
@@ -218,7 +258,7 @@ export const StudyStreakCard: React.FC = () => {
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      gap: 0.3,
+                      gap: 0.5,
                     }}
                   >
                     <Box
@@ -241,7 +281,7 @@ export const StudyStreakCard: React.FC = () => {
                         fontSize: "0.6rem",
                         color:
                           day.key === today ? "primary.main" : "text.disabled",
-                        fontWeight: day.key === today ? 700 : 400,
+                        fontWeight: day.key === today ? 800 : 500,
                       }}
                     >
                       {day.label}
@@ -255,15 +295,15 @@ export const StudyStreakCard: React.FC = () => {
             <Typography
               variant="body2"
               sx={{
-                mt: 2,
                 fontWeight: 600,
                 color: goalReached ? "success.main" : "text.secondary",
+                mt: 1,
               }}
             >
               {getMotivation()}
             </Typography>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );

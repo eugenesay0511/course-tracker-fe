@@ -297,6 +297,204 @@ export const Dashboard: React.FC = () => {
       </Box>
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
+        {/* Quick Resume Banner */}
+        <Grid size={{ xs: 12 }}>
+          <Card
+            elevation={0}
+            sx={(theme) => ({
+              position: "relative",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              alignItems: "center",
+              background:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(120deg, #1e293b 0%, #172554 100%)"
+                  : "linear-gradient(120deg, #eff6ff 0%, #dbeafe 100%)",
+              borderRadius: 4,
+              border: 1,
+              borderColor: "divider",
+            })}
+          >
+            {/* Decorative background elements */}
+            <Box
+              sx={{
+                position: "absolute",
+                top: -100,
+                right: -50,
+                width: 300,
+                height: 300,
+                borderRadius: "50%",
+                background: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%)"
+                    : "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(255,255,255,0) 70%)",
+                zIndex: 0,
+              }}
+            />
+            <Box
+              sx={{
+                position: "absolute",
+                bottom: -50,
+                left: "20%",
+                width: 200,
+                height: 200,
+                borderRadius: "50%",
+                background: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(0,0,0,0) 70%)"
+                    : "radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(255,255,255,0) 70%)",
+                zIndex: 0,
+              }}
+            />
+
+            <CardContent
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                alignItems: { xs: "flex-start", md: "center" },
+                justifyContent: "space-between",
+                p: { xs: 3, md: 5 },
+                gap: 4,
+                width: "100%",
+                zIndex: 1,
+                "&:last-child": { pb: { xs: 3, md: 5 } },
+              }}
+            >
+              <Box sx={{ flexGrow: 1, width: { xs: "100%", md: "auto" } }}>
+                <Typography
+                  variant="subtitle2"
+                  color="primary.main"
+                  fontWeight="bold"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    textTransform: "uppercase",
+                    letterSpacing: 2,
+                    mb: 1.5,
+                  }}
+                >
+                  <PlayIcon sx={{ fontSize: 20 }} />
+                  {lastWatchedVideoId ? "Jump Back In" : "Ready to Start?"}
+                </Typography>
+
+                {lastWatchedVideoId && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: "block",
+                      mb: 0.5,
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {lastChapterTitle}
+                  </Typography>
+                )}
+
+                <Typography
+                  variant="h4"
+                  color="text.primary"
+                  sx={{
+                    mt: 0.5,
+                    fontWeight: 900,
+                    lineHeight: 1.2,
+                    letterSpacing: "-0.5px",
+                  }}
+                >
+                  {lastVideoTitle}
+                </Typography>
+
+                {lastWatchedVideoId && (
+                  <Box sx={{ mt: 3, maxWidth: 500 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Current Progress
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="primary.main"
+                        fontWeight={800}
+                      >
+                        {lastVideoProgressStr}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        width: "100%",
+                        height: 8,
+                        bgcolor: (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.05)",
+                        borderRadius: 4,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          height: "100%",
+                          background:
+                            "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+                          width: `${lastVideoPercent}%`,
+                          borderRadius: 4,
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <Button
+                variant="contained"
+                onClick={() => {
+                  if (lastWatchedVideoId) {
+                    navigate(
+                      `/course?v=${encodeURIComponent(lastWatchedVideoId)}`,
+                    );
+                  } else {
+                    navigate("/course");
+                  }
+                }}
+                sx={{
+                  borderRadius: 3,
+                  py: 1.8,
+                  px: 5,
+                  fontWeight: 800,
+                  textTransform: "none",
+                  fontSize: "1.1rem",
+                  flexShrink: 0,
+                  width: { xs: "100%", md: "auto" },
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  boxShadow: "0 10px 20px -10px rgba(37, 99, 235, 0.5)",
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 14px 28px -10px rgba(37, 99, 235, 0.6)",
+                  },
+                }}
+              >
+                {lastWatchedVideoId ? "Resume Learning" : "Start Course"}
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* Analytics Section */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Grid container spacing={3} sx={{ height: "100%" }}>
@@ -426,9 +624,6 @@ export const Dashboard: React.FC = () => {
                     flexGrow: 1,
                     display: "flex",
                     flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textAlign: "center",
                   }}
                 >
                   <Typography
@@ -451,33 +646,45 @@ export const Dashboard: React.FC = () => {
 
                   <Box
                     sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
+                      flexGrow: 1,
                       display: "flex",
+                      flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      bgcolor: "primary.main",
-                      color: "white",
-                      mb: 2,
-                      boxShadow: "0 8px 16px -4px rgba(59, 130, 246, 0.5)",
                     }}
                   >
-                    <ClockIcon sx={{ fontSize: 40 }} />
+                    <Box
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: "primary.main",
+                        color: "white",
+                        mb: 2,
+                        boxShadow: "0 8px 16px -4px rgba(59, 130, 246, 0.5)",
+                      }}
+                    >
+                      <ClockIcon sx={{ fontSize: 40 }} />
+                    </Box>
+
+                    <Typography
+                      variant="h3"
+                      color="text.primary"
+                      fontWeight="900"
+                      sx={{ letterSpacing: "-1px" }}
+                    >
+                      {formatDuration(totalWatchedTime)}
+                    </Typography>
                   </Box>
 
                   <Typography
-                    variant="h3"
-                    color="text.primary"
-                    fontWeight="900"
-                    sx={{ letterSpacing: "-1px" }}
-                  >
-                    {formatDuration(totalWatchedTime)}
-                  </Typography>
-                  <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{ mt: 1 }}
+                    align="center"
+                    sx={{ mt: 2, fontWeight: 500 }}
                   >
                     Total learning time
                   </Typography>
@@ -487,140 +694,8 @@ export const Dashboard: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* Quick Resume Card */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card
-            sx={(theme) => ({
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              background:
-                theme.palette.mode === "dark"
-                  ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                  : "linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%)",
-              border: 1,
-              borderColor: "divider",
-              boxShadow:
-                theme.palette.mode === "dark"
-                  ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
-                  : "0 20px 40px -4px rgba(148, 163, 184, 0.25)",
-              borderRadius: 4,
-            })}
-          >
-            <CardContent
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                p: 3,
-              }}
-            >
-              <Typography
-                variant="subtitle2"
-                color="primary.main"
-                fontWeight="bold"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  textTransform: "uppercase",
-                  letterSpacing: 1,
-                  mb: 2,
-                }}
-              >
-                <PlayIcon sx={{ fontSize: 18 }} />
-                {lastWatchedVideoId ? "Jump Back In" : "Ready to Start?"}
-              </Typography>
-
-              {lastWatchedVideoId && (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ mt: 2, textTransform: "uppercase", letterSpacing: 0.5 }}
-                >
-                  {lastChapterTitle}
-                </Typography>
-              )}
-
-              <Typography
-                variant="h6"
-                color="text.primary"
-                sx={{ mt: 0.5, fontWeight: 600, lineHeight: 1.3 }}
-              >
-                {lastVideoTitle}
-              </Typography>
-
-              {lastWatchedVideoId && (
-                <Box sx={{ mt: 3 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      Progress
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight="bold"
-                    >
-                      {lastVideoProgressStr}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      width: "100%",
-                      height: 6,
-                      bgcolor: "action.hover",
-                      borderRadius: 3,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        height: "100%",
-                        bgcolor: "secondary.main",
-                        width: `${lastVideoPercent}%`,
-                        borderRadius: 3,
-                      }}
-                    />
-                  </Box>
-                </Box>
-              )}
-
-              <Box sx={{ flexGrow: 1 }} />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => {
-                  if (lastWatchedVideoId) {
-                    navigate(
-                      `/course?v=${encodeURIComponent(lastWatchedVideoId)}`,
-                    );
-                  } else {
-                    navigate("/course");
-                  }
-                }}
-                sx={{
-                  mt: 3,
-                  borderRadius: 2,
-                  py: 1.5,
-                  fontWeight: "bold",
-                  textTransform: "none",
-                  fontSize: "1rem",
-                }}
-              >
-                {lastWatchedVideoId ? "Resume Video" : "Start Course"}
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
         {/* Study Streak */}
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <StudyStreakCard />
         </Grid>
 
