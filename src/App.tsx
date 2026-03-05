@@ -1,11 +1,4 @@
-import {
-  useState,
-  useMemo,
-  createContext,
-  useContext,
-  lazy,
-  Suspense,
-} from "react";
+import { useMemo, lazy, Suspense, useEffect } from "react";
 import {
   Box,
   AppBar,
@@ -30,9 +23,8 @@ import {
   Route,
   useNavigate,
   useLocation,
+  useSearchParams,
 } from "react-router-dom";
-import type { PaletteMode } from "@mui/material";
-
 import { createAppTheme } from "./theme";
 const Dashboard = lazy(() =>
   import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
@@ -52,13 +44,10 @@ import {
   Settings as SettingsIcon,
   BookmarkBorder as BookmarkIcon,
 } from "@mui/icons-material";
-import { CourseProgressProvider } from "./context/CourseProgressContext";
 import { useCourseProgress } from "./hooks/useCourseProgress";
-
-export const ThemeModeContext = createContext({
-  toggleTheme: () => {},
-  mode: "dark" as PaletteMode,
-});
+import { useAtom, useSetAtom } from "jotai";
+import { rootHandleAtom, permissionStatusAtom, themeModeAtom } from "./store";
+import { getStoredHandle } from "./utils/idb";
 
 function Navigation() {
   const navigate = useNavigate();
@@ -146,7 +135,10 @@ function Navigation() {
 }
 
 function ThemeToggle() {
-  const { mode, toggleTheme } = useContext(ThemeModeContext);
+  const [mode, setMode] = useAtom(themeModeAtom);
+  const toggleTheme = () =>
+    setMode((prev) => (prev === "dark" ? "light" : "dark"));
+
   return (
     <Tooltip title={`Switch to ${mode === "dark" ? "Light" : "Dark"} Mode`}>
       <IconButton onClick={toggleTheme} color="inherit">
@@ -157,10 +149,17 @@ function ThemeToggle() {
 }
 
 function SettingsButton() {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   return (
     <Tooltip title="Settings">
-      <IconButton color="inherit" onClick={() => navigate("/settings")}>
+      <IconButton
+        color="inherit"
+        onClick={() => {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.set("settings", "true");
+          setSearchParams(nextParams);
+        }}
+      >
         <SettingsIcon />
       </IconButton>
     </Tooltip>
@@ -169,6 +168,15 @@ function SettingsButton() {
 function AppContent() {
   const { courseData } = useCourseProgress();
   const hasData = courseData && courseData.length > 0;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isSettingsOpen = searchParams.get("settings") === "true";
+
+  const closeSettings = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("settings");
+    nextParams.delete("action");
+    setSearchParams(nextParams);
+  };
 
   return (
     <Box
@@ -207,8 +215,8 @@ function AppContent() {
             }}
           >
             {hasData && <SearchBar />}
-            <SettingsButton />
             <ThemeToggle />
+            <SettingsButton />
           </Box>
         </Toolbar>
       </AppBar>
@@ -241,13 +249,14 @@ function AppContent() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/course" element={<CoursePlayer />} />
                 <Route path="/bookmarks" element={<Bookmarks />} />
-                <Route path="/settings" element={<Settings />} />
               </Routes>
             ) : (
               <Routes>
-                <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<WelcomeScreen />} />
               </Routes>
+            )}
+            {isSettingsOpen && (
+              <Settings open={isSettingsOpen} onClose={closeSettings} />
             )}
           </Suspense>
         </Box>
@@ -255,33 +264,47 @@ function AppContent() {
     </Box>
   );
 }
+
+function HandleInitializer() {
+  const setRootHandle = useSetAtom(rootHandleAtom);
+  const setPermissionStatus = useSetAtom(permissionStatusAtom);
+
+  useEffect(() => {
+    let mounted = true;
+    const initHandle = async () => {
+      try {
+        const handle = await getStoredHandle();
+        if (handle && mounted) {
+          setRootHandle(handle);
+          // @ts-ignore
+          const status = await handle.queryPermission({ mode: "read" });
+          if (mounted) setPermissionStatus(status);
+        }
+      } catch (err) {
+        console.error("Failed to restore handle from IDB:", err);
+      }
+    };
+    initHandle();
+    return () => {
+      mounted = false;
+    };
+  }, [setRootHandle, setPermissionStatus]);
+
+  return null;
+}
+
 function App() {
-  const [mode, setMode] = useState<PaletteMode>(() => {
-    const saved = localStorage.getItem("watchflow-theme-mode");
-    return (saved as PaletteMode) || "dark";
-  });
-
-  const toggleTheme = () => {
-    setMode((prev) => {
-      const newMode = prev === "dark" ? "light" : "dark";
-      localStorage.setItem("watchflow-theme-mode", newMode);
-      return newMode;
-    });
-  };
-
+  const [mode] = useAtom(themeModeAtom);
   const currentTheme = useMemo(() => createAppTheme(mode), [mode]);
 
   return (
-    <ThemeModeContext.Provider value={{ mode, toggleTheme }}>
-      <ThemeProvider theme={currentTheme}>
-        <CssBaseline />
-        <CourseProgressProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </CourseProgressProvider>
-      </ThemeProvider>
-    </ThemeModeContext.Provider>
+    <ThemeProvider theme={currentTheme}>
+      <CssBaseline />
+      <HandleInitializer />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

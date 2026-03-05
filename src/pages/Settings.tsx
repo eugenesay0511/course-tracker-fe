@@ -7,7 +7,6 @@ import {
   Button,
   Alert,
   IconButton,
-  Tooltip,
   Snackbar,
   Dialog,
   DialogTitle,
@@ -24,12 +23,19 @@ import {
   CheckCircle as SuccessIcon,
   DeleteForever as DeleteIcon,
   Timer as TimerIcon,
+  Close as CloseIcon,
+  FolderOpen as FolderIcon,
+  Storage as StorageIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useCourseProgress } from "../hooks/useCourseProgress";
 import { scanCourseDirectory } from "../utils/scanner";
 
-export const Settings: React.FC = () => {
+export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
+  open,
+  onClose,
+}) => {
   const {
     progress,
     setVideoRootPath,
@@ -45,7 +51,6 @@ export const Settings: React.FC = () => {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const handleSavePath = (pathOverride?: string, newCourseData?: any[]) => {
     let pathToSave =
@@ -116,8 +121,8 @@ export const Settings: React.FC = () => {
           setRootPath(newPath);
           handleSavePath(newPath, scannedData);
 
-          // After success, go back to dashboard
-          setTimeout(() => navigate("/"), 500);
+          // After success, close the settings dialog
+          setTimeout(() => onClose(), 500);
         }
       } else {
         alert(
@@ -136,203 +141,360 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 4, maxWidth: 800, mx: "auto" }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Settings
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Configure your course paths and manage your learning data.
-      </Typography>
-
-      <Paper
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 4,
+            boxShadow: (theme) =>
+              theme.palette.mode === "dark"
+                ? "0 24px 48px rgba(0,0,0,0.6)"
+                : "0 24px 48px rgba(0,0,0,0.1)",
+            backgroundImage: "none",
+          },
+        },
+      }}
+    >
+      <DialogTitle
         sx={{
+          m: 0,
           p: 3,
-          mb: 4,
-          border: 2,
-          borderColor:
-            searchParams.get("action") === "select-folder"
-              ? "primary.main"
-              : "divider",
-          boxShadow: searchParams.get("action") === "select-folder" ? 4 : 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          borderBottom: 1,
+          borderColor: "divider",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
-          <Typography variant="h6">Course Location</Typography>
-          <Tooltip title="This is the folder where your course videos are stored.">
-            <IconButton size="small">
-              <InfoIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        <Box
+          sx={{
+            display: "flex",
+            p: 1,
+            borderRadius: 2,
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+          }}
+        >
+          <SettingsIcon fontSize="small" />
         </Box>
+        <Typography variant="h6" fontWeight="bold" component="span">
+          Preferences
+        </Typography>
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 20,
+            color: (theme) => theme.palette.text.secondary,
+            "&:hover": {
+              bgcolor: "action.hover",
+            },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
 
-        <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
-          <TextField
-            fullWidth
-            size="small"
-            variant="outlined"
-            placeholder="C:/Path/To/Your/Course"
-            value={rootPath}
-            onChange={(e) => setRootPath(e.target.value)}
-            error={!!error}
-            helperText={
-              error ||
-              "Step 1 (Optional): Paste full path. Step 2: Click 'Select Folder' and select the folder."
-            }
-          />
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              variant="contained"
-              onClick={handleBrowseAndScan}
+      <DialogContent sx={{ p: 0 }}>
+        <Box sx={{ p: { xs: 3, sm: 4 } }}>
+          {/* Group 1: Course Location */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <FolderIcon color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                Course Location
+              </Typography>
+            </Box>
+            <Paper
+              variant="outlined"
               sx={{
-                whiteSpace: "nowrap",
-                scale:
-                  searchParams.get("action") === "select-folder" ? "1.05" : "1",
+                p: 2.5,
+                borderRadius: 3,
+                bgcolor: "background.default",
+                borderColor:
+                  searchParams.get("action") === "select-folder"
+                    ? "primary.main"
+                    : "divider",
+                boxShadow:
+                  searchParams.get("action") === "select-folder"
+                    ? "0 0 0 2px rgba(59, 130, 246, 0.5)"
+                    : "none",
                 transition: "all 0.2s",
               }}
             >
-              Select Folder
-            </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select the folder on your computer where your course videos are
+                stored.
+              </Typography>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", sm: "row" },
+                  gap: 1.5,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  placeholder="e.g. C:/Courses/React"
+                  value={rootPath}
+                  onChange={(e) => setRootPath(e.target.value)}
+                  error={!!error}
+                  helperText={error}
+                  slotProps={{
+                    input: {
+                      sx: { borderRadius: 2, bgcolor: "background.paper" },
+                    },
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleBrowseAndScan}
+                  startIcon={<FolderIcon />}
+                  sx={{
+                    borderRadius: 2,
+                    whiteSpace: "nowrap",
+                    px: 3,
+                    height: 40,
+                    textTransform: "none",
+                    fontWeight: "bold",
+                    flexShrink: 0,
+                  }}
+                >
+                  Browse
+                </Button>
+              </Box>
+
+              <Alert
+                severity="info"
+                icon={<InfoIcon />}
+                sx={{
+                  mt: 3,
+                  borderRadius: 2,
+                  "& .MuiAlert-icon": { alignItems: "center" },
+                }}
+              >
+                For security reasons, your browser requires you to manually
+                select the folder to grant access permissions.
+              </Alert>
+            </Paper>
+          </Box>
+
+          {/* Group 2: Daily Goal */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <TimerIcon color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                Study Goal
+              </Typography>
+            </Box>
+            <Paper
+              variant="outlined"
+              sx={{ p: 3, borderRadius: 3, bgcolor: "background.default" }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Set a daily watching goal to keep up your learning streak.
+                </Typography>
+                <Typography variant="h6" color="primary.main" fontWeight={800}>
+                  {progress.settings.dailyGoalMinutes}m
+                </Typography>
+              </Box>
+              <Box sx={{ px: 2, mt: 3, mb: 1 }}>
+                <Slider
+                  value={progress.settings.dailyGoalMinutes}
+                  onChange={(_e, value) => setDailyGoal(value as number)}
+                  min={5}
+                  max={120}
+                  step={5}
+                  marks={[
+                    { value: 5, label: "5m" },
+                    { value: 30, label: "30m" },
+                    { value: 60, label: "1h" },
+                    { value: 120, label: "2h" },
+                  ]}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(v) => `${v}m`}
+                  sx={{
+                    "& .MuiSlider-thumb": {
+                      width: 20,
+                      height: 20,
+                      transition: "0.3s cubic-bezier(.47,1.64,.41,.8)",
+                      "&:hover, &.Mui-focusVisible": {
+                        boxShadow: `0px 0px 0px 8px rgba(59, 130, 246, 0.16)`,
+                      },
+                      "&.Mui-active": {
+                        width: 24,
+                        height: 24,
+                      },
+                    },
+                  }}
+                />
+              </Box>
+            </Paper>
+          </Box>
+
+          {/* Group 3: Data Management */}
+          <Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <StorageIcon color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                Data & Storage
+              </Typography>
+            </Box>
+            <Paper
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                bgcolor: "background.default",
+                overflow: "hidden",
+              }}
+            >
+              <Box
+                sx={{
+                  p: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 2,
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    Backup Progress
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Export or import your learning data.
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<ExportIcon />}
+                    onClick={exportProgress}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Export
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    component="label"
+                    startIcon={<ImportIcon />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Import
+                    <input
+                      type="file"
+                      hidden
+                      accept=".json"
+                      onChange={handleImport}
+                    />
+                  </Button>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              <Box
+                sx={{
+                  p: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 2,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(239, 68, 68, 0.04)"
+                      : "rgba(239, 68, 68, 0.02)",
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    color="error"
+                    fontWeight="bold"
+                  >
+                    Delete Data
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Permanently clear all watch history.
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => setConfirmClearOpen(true)}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    boxShadow: "none",
+                  }}
+                >
+                  Clear
+                </Button>
+              </Box>
+            </Paper>
           </Box>
         </Box>
-        {searchParams.get("action") === "select-folder" && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Please click "Select Folder" to update your course directory.
-          </Alert>
-        )}
-        <Alert
-          severity="info"
-          sx={(theme) => ({
-            mt: 3,
-            bgcolor:
-              theme.palette.mode === "dark"
-                ? "rgba(59, 130, 246, 0.05)"
-                : "rgba(37, 99, 235, 0.05)",
-            color:
-              theme.palette.mode === "dark" ? "primary.light" : "primary.main",
-            border: 1,
-            borderColor: "primary.main",
-          })}
-        >
-          For security reasons, you must manually <b>select the folder</b> to
-          grant permission. Providing the <b>full absolute path</b> is optional
-          but recommended.
-        </Alert>
-      </Paper>
+      </DialogContent>
 
-      <Paper sx={{ p: 3, mb: 4, border: 1, borderColor: "divider" }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
-          <TimerIcon color="primary" />
-          <Typography variant="h6">Daily Study Goal</Typography>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Set a daily watching goal to build your study streak. The streak
-          counter on the Dashboard will track consecutive days you meet this
-          goal.
-        </Typography>
-        <Box sx={{ px: 2 }}>
-          <Typography variant="body1" fontWeight={700} sx={{ mb: 1 }}>
-            {progress.settings.dailyGoalMinutes} minutes per day
-          </Typography>
-          <Slider
-            value={progress.settings.dailyGoalMinutes}
-            onChange={(_e, value) => setDailyGoal(value as number)}
-            min={5}
-            max={120}
-            step={5}
-            marks={[
-              { value: 5, label: "5m" },
-              { value: 30, label: "30m" },
-              { value: 60, label: "1h" },
-              { value: 120, label: "2h" },
-            ]}
-            valueLabelDisplay="auto"
-            valueLabelFormat={(v) => `${v} min`}
-          />
-        </Box>
-      </Paper>
-
-      <Paper sx={{ p: 3, border: 1, borderColor: "divider" }}>
-        <Typography variant="h6" gutterBottom>
-          Data Management
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Export your progress to back it up or move it to another computer.
-        </Typography>
-
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<ExportIcon />}
-            onClick={exportProgress}
-          >
-            Export Progress (.json)
-          </Button>
-
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<ImportIcon />}
-          >
-            Import Progress
-            <input type="file" hidden accept=".json" onChange={handleImport} />
-          </Button>
-        </Box>
-
-        <Divider sx={{ my: 3 }} />
-
-        <Box>
-          <Typography
-            variant="subtitle1"
-            color="error"
-            fontWeight="bold"
-            gutterBottom
-          >
-            Danger Zone
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Permanently delete all your watch history and progress. This cannot
-            be undone.
-          </Typography>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => setConfirmClearOpen(true)}
-          >
-            Clear User Progress
-          </Button>
-        </Box>
-      </Paper>
-
-      {/* Confirmation Dialog */}
       <Dialog
         open={confirmClearOpen}
         onClose={() => setConfirmClearOpen(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
+        slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}
       >
-        <DialogTitle
-          id="alert-dialog-title"
-          sx={{ color: "error.main", fontWeight: "bold" }}
-        >
-          {"Clear All Progress?"}
+        <DialogTitle sx={{ color: "error.main", fontWeight: "bold" }}>
+          Clear All Progress?
         </DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
+          <DialogContentText>
             This will permanently reset all your video progress, watched time,
-            and completed status. Your course location and settings will remain
-            as they are.
+            and completed status. Your course location and settings will remain.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={() => setConfirmClearOpen(false)} variant="outlined">
+          <Button
+            onClick={() => setConfirmClearOpen(false)}
+            variant="outlined"
+            sx={{ borderRadius: 2 }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleClearProgress}
             color="error"
             variant="contained"
-            autoFocus
+            sx={{ borderRadius: 2, boxShadow: "none" }}
           >
             Clear Everything
           </Button>
@@ -346,10 +508,10 @@ export const Settings: React.FC = () => {
         message={
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <SuccessIcon color="secondary" />
-            <span>Action completed successfully!</span>
+            <span>Settings updated!</span>
           </Box>
         }
       />
-    </Box>
+    </Dialog>
   );
 };

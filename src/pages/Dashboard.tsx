@@ -24,7 +24,7 @@ import {
   FolderOpen as ChapterIcon,
   AccessTime as ClockIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useCourseProgress } from "../hooks/useCourseProgress";
 import { formatDuration, formatTime } from "../utils/formatters";
@@ -42,6 +42,7 @@ type ChapterStat = Chapter & {
 export const Dashboard: React.FC = () => {
   const { progress, courseData, rootHandle } = useCourseProgress();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedChapter, setSelectedChapter] = useState<ChapterStat | null>(
     null,
   );
@@ -237,7 +238,12 @@ export const Dashboard: React.FC = () => {
                 bgcolor: "action.hover",
               },
             }}
-            onClick={() => navigate("/settings?action=select-folder")}
+            onClick={() => {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.set("settings", "true");
+              nextParams.set("action", "select-folder");
+              setSearchParams(nextParams);
+            }}
           >
             <ChapterIcon sx={{ fontSize: 20, color: "primary.main" }} />
             <Typography
