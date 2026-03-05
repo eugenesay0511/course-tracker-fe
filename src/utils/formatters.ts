@@ -20,6 +20,17 @@ export const getTodayKey = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+export const getFormattedDateTime = (): string => {
+  const d = new Date();
+  const Y = d.getFullYear();
+  const M = String(d.getMonth() + 1).padStart(2, "0");
+  const D = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  const s = String(d.getSeconds()).padStart(2, "0");
+  return `${Y}${M}${D}_${h}${m}${s}`;
+};
+
 export const getStreakDays = (
   log: { date: string; watchedSeconds: number }[],
   goalMinutes: number,

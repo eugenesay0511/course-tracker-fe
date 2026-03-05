@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import staticCourseData from "../data/course-data.json";
 import { getStoredHandle, setStoredHandle } from "../utils/idb";
-import { getTodayKey } from "../utils/formatters";
+import { getTodayKey, getFormattedDateTime } from "../utils/formatters";
 import type {
   VideoProgress,
   CourseProgressState,
@@ -326,7 +326,10 @@ export const CourseProgressProvider: React.FC<{
       "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
     const linkElement = document.createElement("a");
     linkElement.setAttribute("href", dataUri);
-    linkElement.setAttribute("download", "course_progress.json");
+    linkElement.setAttribute(
+      "download",
+      `course_progress_${getFormattedDateTime()}.json`,
+    );
     linkElement.click();
   }, [progress, courseData]);
 
