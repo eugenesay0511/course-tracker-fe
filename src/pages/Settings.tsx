@@ -27,24 +27,70 @@ import {
   Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { useSearchParams } from "react-router-dom";
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useAtomValue, useAtom, useSetAtom } from "jotai";
+import {
+  settingsAtom,
+  videoRootPathAtom,
+  dailyGoalMinutesAtom,
+  courseProgressStateAtom,
+  courseDataStateAtom,
+  rootHandleAtom,
+  permissionStatusAtom,
+  clearProgressAtom,
+  importProgressAtom,
+} from "../store";
+import { setStoredHandle } from "../utils/idb";
+import { getFormattedDateTime } from "../utils/formatters";
 import { scanCourseDirectory } from "../utils/scanner";
 
 export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
   onClose,
 }) => {
-  const {
-    progress,
-    setVideoRootPath,
-    setCourseData,
-    setRootHandle,
-    exportProgress,
-    importProgress,
-    clearProgress,
-    setDailyGoal,
-  } = useCourseProgress();
-  const [rootPath, setRootPath] = useState(progress.settings.videoRootPath);
+  const settings = useAtomValue(settingsAtom);
+  const setVideoRootPath = useSetAtom(videoRootPathAtom);
+  const setDailyGoal = useSetAtom(dailyGoalMinutesAtom);
+  const setCourseData = useSetAtom(courseDataStateAtom);
+  const setRootHandleState = useSetAtom(rootHandleAtom);
+  const setPermissionStatus = useSetAtom(permissionStatusAtom);
+  const [progress] = useAtom(courseProgressStateAtom);
+  const courseData = useAtomValue(courseDataStateAtom);
+  const clearProgressFn = useSetAtom(clearProgressAtom);
+  const importProgressFn = useSetAtom(importProgressAtom);
+
+  const setRootHandle = (handle: FileSystemDirectoryHandle | null) => {
+    setRootHandleState(handle);
+    if (handle) {
+      setStoredHandle(handle).catch((err) =>
+        console.error("Failed to store handle in IDB:", err),
+      );
+      setPermissionStatus("granted");
+    }
+  };
+
+  const exportProgress = () => {
+    const dataToExport = { ...progress, courseData };
+    const dataStr = JSON.stringify(dataToExport, null, 2);
+    const dataUri =
+      "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+    const linkElement = document.createElement("a");
+    linkElement.setAttribute("href", dataUri);
+    linkElement.setAttribute(
+      "download",
+      `course_progress_${getFormattedDateTime()}.json`,
+    );
+    linkElement.click();
+  };
+
+  const importProgress = (jsonString: string) => {
+    return importProgressFn(jsonString);
+  };
+
+  const clearProgress = () => {
+    clearProgressFn();
+  };
+
+  const [rootPath, setRootPath] = useState(settings.videoRootPath);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -297,12 +343,12 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
                   Set a daily watching goal to keep up your learning streak.
                 </Typography>
                 <Typography variant="h6" color="primary.main" fontWeight={800}>
-                  {progress.settings.dailyGoalMinutes}m
+                  {settings.dailyGoalMinutes}m
                 </Typography>
               </Box>
               <Box sx={{ px: 2, mt: 3, mb: 1 }}>
                 <Slider
-                  value={progress.settings.dailyGoalMinutes}
+                  value={settings.dailyGoalMinutes}
                   onChange={(_e, value) => setDailyGoal(value as number)}
                   min={5}
                   max={120}

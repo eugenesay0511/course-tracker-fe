@@ -26,7 +26,14 @@ import {
 } from "@mui/icons-material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useAtomValue } from "jotai";
+import {
+  courseDataStateAtom,
+  rootHandleAtom,
+  videosProgressAtom,
+  lastWatchedVideoIdAtom,
+  settingsAtom,
+} from "../store";
 import { formatDuration, formatTime } from "../utils/formatters";
 import type { Chapter } from "../types";
 import { StudyStreakCard } from "../components/StudyStreakCard";
@@ -40,7 +47,11 @@ type ChapterStat = Chapter & {
 };
 
 export const Dashboard: React.FC = () => {
-  const { progress, courseData, rootHandle } = useCourseProgress();
+  const courseData = useAtomValue(courseDataStateAtom);
+  const rootHandle = useAtomValue(rootHandleAtom);
+  const videosProgress = useAtomValue(videosProgressAtom);
+  const lastWatchedVideoId = useAtomValue(lastWatchedVideoIdAtom);
+  const settings = useAtomValue(settingsAtom);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedChapter, setSelectedChapter] = useState<ChapterStat | null>(
@@ -63,7 +74,7 @@ export const Dashboard: React.FC = () => {
 
       chapter.videos.forEach((video) => {
         totalVideos++;
-        const vidProg = progress?.videos?.[video.id];
+        const vidProg = videosProgress?.[video.id];
         if (vidProg) {
           if (vidProg.completed) {
             completedVideos++;
@@ -104,7 +115,7 @@ export const Dashboard: React.FC = () => {
       remainingVideos,
       chapterStats,
     };
-  }, [courseData, progress]);
+  }, [courseData, videosProgress]);
 
   const resumeInfo = useMemo(() => {
     let lastVideoTitle = "Start your journey";
@@ -112,15 +123,13 @@ export const Dashboard: React.FC = () => {
     let lastVideoProgressStr = "";
     let lastVideoPercent = 0;
 
-    if (progress?.lastWatchedVideoId) {
-      for (const chapter of courseData) {
-        const video = chapter.videos.find(
-          (v) => v.id === progress.lastWatchedVideoId,
-        );
-        if (video) {
-          lastVideoTitle = video.title;
-          lastChapterTitle = chapter.title;
-          const vidProg = progress.videos[progress.lastWatchedVideoId];
+    if (lastWatchedVideoId) {
+      for (const ch of courseData) {
+        const v = ch.videos.find((v) => v.id === lastWatchedVideoId);
+        if (v) {
+          lastVideoTitle = v.title;
+          lastChapterTitle = ch.title;
+          const vidProg = videosProgress[lastWatchedVideoId];
           if (vidProg) {
             lastVideoProgressStr = `${formatTime(vidProg.currentTime)} / ${formatTime(vidProg.duration)}`;
             if (vidProg.duration > 0) {
@@ -141,7 +150,7 @@ export const Dashboard: React.FC = () => {
       lastVideoProgressStr,
       lastVideoPercent,
     };
-  }, [courseData, progress]);
+  }, [courseData, lastWatchedVideoId, videosProgress]);
 
   const {
     totalVideos,
@@ -160,8 +169,8 @@ export const Dashboard: React.FC = () => {
 
   const folderName =
     rootHandle?.name ||
-    (progress.settings?.videoRootPath
-      ? progress.settings.videoRootPath.split(/[/\\]/).filter(Boolean).pop()
+    (settings?.videoRootPath
+      ? settings.videoRootPath.split(/[/\\]/).filter(Boolean).pop()
       : null);
 
   return (
@@ -520,12 +529,10 @@ export const Dashboard: React.FC = () => {
                 }}
               >
                 <PlayIcon sx={{ fontSize: 18 }} />
-                {progress.lastWatchedVideoId
-                  ? "Jump Back In"
-                  : "Ready to Start?"}
+                {lastWatchedVideoId ? "Jump Back In" : "Ready to Start?"}
               </Typography>
 
-              {progress.lastWatchedVideoId && (
+              {lastWatchedVideoId && (
                 <Typography
                   variant="caption"
                   color="text.secondary"
@@ -543,7 +550,7 @@ export const Dashboard: React.FC = () => {
                 {lastVideoTitle}
               </Typography>
 
-              {progress.lastWatchedVideoId && (
+              {lastWatchedVideoId && (
                 <Box sx={{ mt: 3 }}>
                   <Box
                     sx={{
@@ -589,9 +596,9 @@ export const Dashboard: React.FC = () => {
                 variant="contained"
                 color="primary"
                 onClick={() => {
-                  if (progress.lastWatchedVideoId) {
+                  if (lastWatchedVideoId) {
                     navigate(
-                      `/course?v=${encodeURIComponent(progress.lastWatchedVideoId)}`,
+                      `/course?v=${encodeURIComponent(lastWatchedVideoId)}`,
                     );
                   } else {
                     navigate("/course");
@@ -606,7 +613,7 @@ export const Dashboard: React.FC = () => {
                   fontSize: "1rem",
                 }}
               >
-                {progress.lastWatchedVideoId ? "Resume Video" : "Start Course"}
+                {lastWatchedVideoId ? "Resume Video" : "Start Course"}
               </Button>
             </CardContent>
           </Card>
@@ -820,7 +827,7 @@ export const Dashboard: React.FC = () => {
                     <List dense>
                       {selectedChapter.videos.map(
                         (video: any, vIdx: number) => {
-                          const videoProg = progress?.videos?.[video.id];
+                          const videoProg = videosProgress?.[video.id];
                           const isCompleted = videoProg?.completed;
                           const percent = videoProg
                             ? videoProg.duration > 0

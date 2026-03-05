@@ -23,7 +23,8 @@ import {
   Bookmark as BookmarkIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useAtomValue } from "jotai";
+import { courseDataStateAtom, bookmarksAtom } from "../store";
 import { formatTime } from "../utils/formatters";
 
 interface SearchResult {
@@ -40,7 +41,8 @@ export const SearchBar: React.FC = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { courseData, progress } = useCourseProgress();
+  const courseData = useAtomValue(courseDataStateAtom);
+  const bookmarks = useAtomValue(bookmarksAtom);
 
   // Debounce search query by 200ms
   useEffect(() => {
@@ -107,7 +109,6 @@ export const SearchBar: React.FC = () => {
     }
 
     // Search bookmarks
-    const bookmarks = progress.bookmarks || [];
     for (const bm of bookmarks) {
       if (bm.note.toLowerCase().includes(q)) {
         // Find video title
@@ -130,7 +131,7 @@ export const SearchBar: React.FC = () => {
     }
 
     return out.slice(0, 20);
-  }, [debouncedQuery, courseData, progress.bookmarks]);
+  }, [debouncedQuery, courseData, bookmarks]);
 
   const getIcon = (type: string) => {
     switch (type) {

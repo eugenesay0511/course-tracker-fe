@@ -18,11 +18,18 @@ import {
   BookmarkBorder as BookmarkIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useAtomValue, useSetAtom } from "jotai";
+import {
+  courseDataStateAtom,
+  bookmarksAtom,
+  removeBookmarkAtom,
+} from "../store";
 import { formatTime } from "../utils/formatters";
 
 export const Bookmarks: React.FC = () => {
-  const { progress, courseData, removeBookmark } = useCourseProgress();
+  const courseData = useAtomValue(courseDataStateAtom);
+  const bookmarks = useAtomValue(bookmarksAtom);
+  const removeBookmarkFn = useSetAtom(removeBookmarkAtom);
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
 
@@ -39,16 +46,16 @@ export const Bookmarks: React.FC = () => {
 
   // Filter and group bookmarks by video
   const groupedBookmarks = useMemo(() => {
-    const bookmarks = progress.bookmarks || [];
+    const allBookmarks = bookmarks || [];
     const filtered = filter
-      ? bookmarks.filter(
-          (b) =>
+      ? allBookmarks.filter(
+          (b: any) =>
             b.note.toLowerCase().includes(filter.toLowerCase()) ||
             (videoLookup.get(b.videoId)?.title || "")
               .toLowerCase()
               .includes(filter.toLowerCase()),
         )
-      : bookmarks;
+      : allBookmarks;
 
     const groups = new Map<
       string,
@@ -76,13 +83,13 @@ export const Bookmarks: React.FC = () => {
 
     // Sort items within each group by timestamp
     for (const group of groups.values()) {
-      group.items.sort((a, b) => a.timestamp - b.timestamp);
+      group.items.sort((a: any, b: any) => a.timestamp - b.timestamp);
     }
 
     return Array.from(groups.entries());
-  }, [progress.bookmarks, filter, videoLookup]);
+  }, [bookmarks, filter, videoLookup]);
 
-  const totalBookmarks = progress.bookmarks?.length || 0;
+  const totalBookmarks = bookmarks?.length || 0;
 
   return (
     <Box
@@ -243,7 +250,7 @@ export const Bookmarks: React.FC = () => {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeBookmark(bm.id);
+                        removeBookmarkFn(bm.id);
                       }}
                       sx={{ ml: 1 }}
                     >

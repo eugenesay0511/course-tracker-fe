@@ -261,6 +261,45 @@ export const bookmarksAtom = atom(
   }
 );
 
+export const addBookmarkAtom = atom(
+  null,
+  (get, set, { videoId, timestamp, note }: { videoId: string; timestamp: number; note: string }) => {
+    const prev = get(courseProgressStateAtom);
+    const newBookmark: Bookmark = {
+      id: crypto.randomUUID(),
+      videoId,
+      timestamp,
+      note,
+      createdAt: Date.now(),
+    };
+    set(courseProgressStateAtom, {
+      ...prev,
+      bookmarks: [...prev.bookmarks, newBookmark],
+    });
+  }
+);
+
+export const removeBookmarkAtom = atom(null, (get, set, bookmarkId: string) => {
+  const prev = get(courseProgressStateAtom);
+  set(courseProgressStateAtom, {
+    ...prev,
+    bookmarks: prev.bookmarks.filter((b) => b.id !== bookmarkId),
+  });
+});
+
+export const updateBookmarkAtom = atom(
+  null,
+  (get, set, { bookmarkId, note }: { bookmarkId: string; note: string }) => {
+    const prev = get(courseProgressStateAtom);
+    set(courseProgressStateAtom, {
+      ...prev,
+      bookmarks: prev.bookmarks.map((b) =>
+        b.id === bookmarkId ? { ...b, note } : b
+      ),
+    });
+  }
+);
+
 // Helpers
 export const lastWatchedVideoIdAtom = atom(
   (get) => get(courseProgressStateAtom).lastWatchedVideoId

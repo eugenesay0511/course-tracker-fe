@@ -11,7 +11,8 @@ import {
   LocalFireDepartment as FireIcon,
   TrendingUp as TrendingIcon,
 } from "@mui/icons-material";
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useAtomValue } from "jotai";
+import { dailyWatchLogAtom, dailyGoalMinutesAtom } from "../store";
 import {
   formatDuration,
   getTodayKey,
@@ -19,9 +20,8 @@ import {
 } from "../utils/formatters";
 
 export const StudyStreakCard: React.FC = () => {
-  const { progress } = useCourseProgress();
-  const dailyGoal = progress.settings?.dailyGoalMinutes || 30;
-  const log = progress.dailyWatchLog || [];
+  const dailyGoal = useAtomValue(dailyGoalMinutesAtom) || 30;
+  const log = useAtomValue(dailyWatchLogAtom) || [];
 
   const today = getTodayKey();
 

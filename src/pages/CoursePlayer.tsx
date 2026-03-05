@@ -1,28 +1,90 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Box, Typography, Button } from "@mui/material";
 import { Lock as LockIcon } from "@mui/icons-material";
 import { useSearchParams } from "react-router-dom";
 
 import { CourseOutline } from "../components/CourseOutline";
 import { VideoPlayer } from "../components/VideoPlayer";
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useAtomValue, useAtom, useSetAtom } from "jotai";
+import {
+  courseDataStateAtom,
+  rootHandleAtom,
+  permissionStatusAtom,
+  settingsAtom,
+  autoplayAtom,
+  outlinePositionAtom,
+  playbackSpeedAtom,
+  bookmarksAtom,
+  videosProgressAtom,
+  lastWatchedVideoIdAtom,
+  updateVideoProgressAtom,
+  markVideoUncompletedAtom,
+  addBookmarkAtom,
+  removeBookmarkAtom,
+} from "../store";
+import type { VideoProgress } from "../types";
 
 export const CoursePlayer: React.FC = () => {
-  const {
-    progress,
-    courseData,
-    rootHandle,
-    permissionStatus,
-    updateVideoProgress,
-    getProgress,
-    markVideoUncompleted,
-    requestPermission,
-    setAutoplay,
-    setOutlinePosition,
-    addBookmark,
-    removeBookmark,
-    setPlaybackSpeed,
-  } = useCourseProgress() as any;
+  const courseData = useAtomValue(courseDataStateAtom);
+  const rootHandle = useAtomValue(rootHandleAtom);
+  const [permissionStatus, setPermissionStatus] = useAtom(permissionStatusAtom);
+  const settings = useAtomValue(settingsAtom);
+  const bookmarks = useAtomValue(bookmarksAtom);
+  const videosProgress = useAtomValue(videosProgressAtom);
+  const lastWatchedVideoId = useAtomValue(lastWatchedVideoIdAtom);
+
+  const setAutoplay = useSetAtom(autoplayAtom);
+  const setOutlinePosition = useSetAtom(outlinePositionAtom);
+  const setPlaybackSpeed = useSetAtom(playbackSpeedAtom);
+  const updateVideoProgressFn = useSetAtom(updateVideoProgressAtom);
+  const markVideoUncompletedFn = useSetAtom(markVideoUncompletedAtom);
+  const addBookmarkFn = useSetAtom(addBookmarkAtom);
+  const removeBookmarkFn = useSetAtom(removeBookmarkAtom);
+
+  const updateVideoProgress = useCallback(
+    (videoId: string, currentTime: number, duration: number) => {
+      updateVideoProgressFn({ videoId, currentTime, duration });
+    },
+    [updateVideoProgressFn],
+  );
+
+  const getProgress = useCallback(
+    (videoId: string): VideoProgress | undefined => {
+      return videosProgress[videoId];
+    },
+    [videosProgress],
+  );
+
+  const markVideoUncompleted = useCallback(
+    (videoId: string) => markVideoUncompletedFn(videoId),
+    [markVideoUncompletedFn],
+  );
+
+  const addBookmark = useCallback(
+    (videoId: string, timestamp: number, note: string) => {
+      addBookmarkFn({ videoId, timestamp, note });
+    },
+    [addBookmarkFn],
+  );
+
+  const removeBookmark = useCallback(
+    (bookmarkId: string) => removeBookmarkFn(bookmarkId),
+    [removeBookmarkFn],
+  );
+
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    if (!rootHandle) return false;
+    try {
+      // @ts-ignore
+      const status = await rootHandle.requestPermission({ mode: "read" });
+      setPermissionStatus(status);
+      return status === "granted";
+    } catch (err) {
+      console.error("Failed to request permission:", err);
+      return false;
+    }
+  }, [rootHandle, setPermissionStatus]);
+
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string | null>(null);
   const [resolvedSubtitleSrc, setResolvedSubtitleSrc] = useState<string | null>(
@@ -36,7 +98,7 @@ export const CoursePlayer: React.FC = () => {
   const seekTimeParam = searchParams.get("t");
   const initialSeekTime = seekTimeParam ? parseFloat(seekTimeParam) : undefined;
 
-  const videoRootPath = progress.settings?.videoRootPath || "";
+  const videoRootPath = settings?.videoRootPath || "";
 
   // Sync active video from query param, last watched, or the first video of the course
   useEffect(() => {
@@ -49,16 +111,16 @@ export const CoursePlayer: React.FC = () => {
     }
 
     // Fallbacks if NO URL parameter exists
-    if (progress.lastWatchedVideoId) {
-      if (String(activeVideoId) !== String(progress.lastWatchedVideoId)) {
-        setActiveVideoId(String(progress.lastWatchedVideoId));
+    if (lastWatchedVideoId) {
+      if (String(activeVideoId) !== String(lastWatchedVideoId)) {
+        setActiveVideoId(String(lastWatchedVideoId));
       }
     } else if (courseData.length > 0 && courseData[0].videos.length > 0) {
       if (String(activeVideoId) !== String(courseData[0].videos[0].id)) {
         setActiveVideoId(String(courseData[0].videos[0].id));
       }
     }
-  }, [videoIdParam, progress.lastWatchedVideoId, courseData, activeVideoId]);
+  }, [videoIdParam, lastWatchedVideoId, courseData, activeVideoId]);
 
   // Handle manual video selection (via outline)
   const handleVideoSelect = React.useCallback(
@@ -214,9 +276,7 @@ export const CoursePlayer: React.FC = () => {
       sx={{
         display: "flex",
         flexDirection:
-          progress.settings?.outlinePosition === "right"
-            ? "row-reverse"
-            : "row",
+          settings?.outlinePosition === "right" ? "row-reverse" : "row",
         width: "100%",
         height: "100%",
         overflow: "hidden",
@@ -226,8 +286,8 @@ export const CoursePlayer: React.FC = () => {
         sx={{
           width: "350px",
           flexShrink: 0,
-          borderRight: progress.settings?.outlinePosition === "right" ? 0 : 1,
-          borderLeft: progress.settings?.outlinePosition === "right" ? 1 : 0,
+          borderRight: settings?.outlinePosition === "right" ? 0 : 1,
+          borderLeft: settings?.outlinePosition === "right" ? 1 : 0,
           borderColor: "divider",
         }}
       >
@@ -237,7 +297,7 @@ export const CoursePlayer: React.FC = () => {
           onVideoSelect={handleVideoSelect}
           getProgress={getProgress}
           markVideoUncompleted={markVideoUncompleted}
-          outlinePosition={progress.settings?.outlinePosition}
+          outlinePosition={settings?.outlinePosition}
           onTogglePosition={setOutlinePosition}
         />
       </Box>
@@ -328,13 +388,13 @@ export const CoursePlayer: React.FC = () => {
             onPrevious={handlePrevious}
             hasNext={!!nextVideo}
             hasPrevious={!!prevVideo}
-            autoplay={progress.settings?.autoplay}
+            autoplay={settings?.autoplay}
             onToggleAutoplay={setAutoplay}
             initialSeekTime={initialSeekTime}
-            bookmarks={progress.bookmarks || []}
+            bookmarks={bookmarks || []}
             onAddBookmark={addBookmark}
             onRemoveBookmark={removeBookmark}
-            playbackSpeed={progress.settings?.playbackSpeed ?? 1}
+            playbackSpeed={settings?.playbackSpeed ?? 1}
             onChangePlaybackSpeed={setPlaybackSpeed}
           />
         ) : (

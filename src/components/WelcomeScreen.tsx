@@ -7,13 +7,32 @@ import {
   TrendingUp as TrendingIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useCourseProgress } from "../hooks/useCourseProgress";
+import { useSetAtom } from "jotai";
+import {
+  rootHandleAtom,
+  permissionStatusAtom,
+  courseDataStateAtom,
+  videoRootPathAtom,
+} from "../store";
+import { setStoredHandle } from "../utils/idb";
 import { scanCourseDirectory } from "../utils/scanner";
 
 export const WelcomeScreen: React.FC = () => {
-  const { setRootHandle, setCourseData, setVideoRootPath } =
-    useCourseProgress();
+  const setRootHandleState = useSetAtom(rootHandleAtom);
+  const setPermissionStatus = useSetAtom(permissionStatusAtom);
+  const setCourseData = useSetAtom(courseDataStateAtom);
+  const setVideoRootPath = useSetAtom(videoRootPathAtom);
   const navigate = useNavigate();
+
+  const setRootHandle = (handle: FileSystemDirectoryHandle | null) => {
+    setRootHandleState(handle);
+    if (handle) {
+      setStoredHandle(handle).catch((err) =>
+        console.error("Failed to store handle in IDB:", err),
+      );
+      setPermissionStatus("granted");
+    }
+  };
 
   const handleSelectFolder = async () => {
     try {

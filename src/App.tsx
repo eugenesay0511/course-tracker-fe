@@ -44,9 +44,13 @@ import {
   Settings as SettingsIcon,
   BookmarkBorder as BookmarkIcon,
 } from "@mui/icons-material";
-import { useCourseProgress } from "./hooks/useCourseProgress";
-import { useAtom, useSetAtom } from "jotai";
-import { rootHandleAtom, permissionStatusAtom, themeModeAtom } from "./store";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import {
+  rootHandleAtom,
+  permissionStatusAtom,
+  themeModeAtom,
+  courseDataStateAtom,
+} from "./store";
 import { getStoredHandle } from "./utils/idb";
 
 function Navigation() {
@@ -166,7 +170,7 @@ function SettingsButton() {
   );
 }
 function AppContent() {
-  const { courseData } = useCourseProgress();
+  const courseData = useAtomValue(courseDataStateAtom);
   const hasData = courseData && courseData.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
   const isSettingsOpen = searchParams.get("settings") === "true";
