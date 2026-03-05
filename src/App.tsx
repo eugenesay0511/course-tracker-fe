@@ -187,14 +187,14 @@ function AppContent() {
               component="img"
               src="/brain.svg"
               sx={{ width: 32, height: 32, mr: 2 }}
-              alt="Big Brain"
+              alt="WatchFlow"
             />
             <Typography
               variant="h6"
               component="div"
               sx={{ fontWeight: "bold" }}
             >
-              Big Brain
+              WatchFlow
             </Typography>
           </Box>
           {hasData && <Navigation />}
@@ -257,14 +257,14 @@ function AppContent() {
 }
 function App() {
   const [mode, setMode] = useState<PaletteMode>(() => {
-    const saved = localStorage.getItem("course-tracker-theme-mode");
+    const saved = localStorage.getItem("watchflow-theme-mode");
     return (saved as PaletteMode) || "dark";
   });
 
   const toggleTheme = () => {
     setMode((prev) => {
       const newMode = prev === "dark" ? "light" : "dark";
-      localStorage.setItem("course-tracker-theme-mode", newMode);
+      localStorage.setItem("watchflow-theme-mode", newMode);
       return newMode;
     });
   };

@@ -75,7 +75,7 @@ export const WelcomeScreen: React.FC = () => {
             mb: 2,
             filter: "drop-shadow(0 4px 12px rgba(59, 130, 246, 0.4))",
           }}
-          alt="Big Brain"
+          alt="WatchFlow"
         />
         <Typography
           variant="h3"
@@ -91,15 +91,15 @@ export const WelcomeScreen: React.FC = () => {
             WebkitTextFillColor: "transparent",
           }}
         >
-          Welcome to Big Brain
+          Welcome to WatchFlow
         </Typography>
         <Typography
           variant="body1"
           color="text.secondary"
           sx={{ mb: 4, maxWidth: 420, mx: "auto" }}
         >
-          Select your course folder to get started. We'll scan the directory and
-          set up your learning dashboard automatically.
+          Select your video folder to get started. We'll scan the directory and
+          set up your viewing dashboard automatically.
         </Typography>
 
         <Button
@@ -123,7 +123,7 @@ export const WelcomeScreen: React.FC = () => {
             mb: 5,
           }}
         >
-          Select Course Folder
+          Select Video Folder
         </Button>
 
         <Box
