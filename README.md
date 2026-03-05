@@ -10,8 +10,9 @@ A comprehensive, local-first web application built with React 19, Vite, and Mate
 - **Bookmarks & Notes**: Save specific timestamps with notes while watching. Easily search and jump back to key moments from the Bookmarks page.
 - **Smart Completion**: Videos are automatically marked as completed when you reach 95% of the total duration.
 - **Customizable Experience**: Toggle between Light and Dark modes, and choose your preferred Course Outline position (Left or Right).
-- **Data Export & Import**: Backup your learning progress as a JSON file (with automatic timestamps), and restore it on another machine.
-- **Vercel / Cloud Ready**: Fully functional when hosted on platforms like Vercel, bypassing browser security blocks by dynamically requesting permission to read your local files.
+- **Settings Dialog**: Manage your course path, study goals, and data export/import through a polished, compact preferences window.
+- **Data Export & Import**: Backup your learning progress as a JSON file (with automatic date/time stamps), and restore it on another machine.
+- **Performance Optimized**: Built with atomic state management to ensure smooth video playback and zero UI jank.
 
 ## 🧠 How It Works (Project Logic)
 
@@ -20,20 +21,23 @@ A comprehensive, local-first web application built with React 19, Vite, and Mate
 The application uses the modern [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) (`window.showDirectoryPicker()`) to securely ask the user for permission to read a folder.
 When a folder is selected, the scanner recursively crawls through the subdirectories. It groups `.mp4` files into "Chapters" based on their parent folder name, and attaches `.srt` subtitle files if they share the same base name.
 
-### 2. Global State Management (`src/context/CourseProgressContext.tsx`)
+### 2. Atomic State Management (`src/store/index.ts`)
 
-The app uses React Context to hold its global state. The state is optimized to prevent unnecessary re-renders and includes:
+The app uses **Jotai** for global state management. Unlike traditional context providers, Jotai uses an "atomic" approach where state is broken down into small, independent pieces (atoms):
 
-- **`courseData`**: The generated nested array of Chapters and Videos.
-- **`progress`**: A dictionary tracking the `currentTime`, `duration`, `completed` status, `bookmarks`, and `dailyWatchLog`.
-- **`rootHandle`**: The browser's active security permission object (`FileSystemDirectoryHandle`) that allows reading the course folder.
+- **`courseDataAtom`**: The generated nested array of Chapters and Videos.
+- **`progressAtom`**: A dictionary tracking the `currentTime`, `duration`, `completed` status, `bookmarks`, and `dailyWatchLog`.
+- **`rootHandleAtom`**: The browser's active security permission object (`FileSystemDirectoryHandle`).
+- **`themeModeAtom`**: Manages Light/Dark mode transitions purely through atomic state.
+
+This ensures that high-frequency updates (like the video progress updating every second) do not trigger unnecessary re-renders in unrelated components like the Sidebar or Navigation bar.
 
 ### 3. Data Persistence (`localStorage` & `IndexedDB`)
 
 To ensure you never lose your progress when you close the tab:
 
-- **Watch Progress & Settings**: The `progress` and `courseData` objects are serialized and saved in `localStorage`.
-- **Security Permissions**: The browser's `rootHandle` is saved in **IndexedDB** (`src/utils/idb.ts`). This allows the app to remember the folder across sessions.
+- **Watch Progress, Settings & Theme**: Utilizing Jotai's `atomWithStorage`, these objects are automatically serialized and saved in `localStorage`.
+- **Security Permissions**: The browser's `rootHandle` is saved in **IndexedDB** (`src/utils/idb.ts`) via a dedicated initializer on app mount. This allows the app to remember and restore the folder across sessions.
 
 ### 4. Local File Playback (`src/pages/CoursePlayer.tsx`)
 
@@ -66,15 +70,16 @@ npm run dev
 
 3. **Configure Your Course**
    - Open the app in your browser.
-   - Navigate to the **Settings** page.
-   - Click **Select Folder** and select the root directory of your video course.
+   - Click the **Settings icon** (cogwheel) in the top-right header.
+   - Click **Browse** and select the root directory of your video course.
    - Set your **Daily Study Goal** to start tracking your streak.
 
 ## 📦 Tech Stack
 
 - **React 19**: Modern UI development.
 - **Vite**: Ultra-fast build tool and dev server.
-- **Material UI (MUI) v7**: Premium, responsive component library.
+- **Material UI (MUI) v6**: Premium, responsive component library.
+- **Jotai**: Fine-grained atomic state management.
 - **MUI X Charts**: Interactive progress visualization.
 - **Vidstack**: High-performance video player framework.
 - **File System Access API**: Secure local file interaction.
