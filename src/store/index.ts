@@ -1,13 +1,10 @@
 import { atom } from "jotai";
-import { atomWithStorage } from "jotai/utils";
+import { atomWithStorage, unwrap } from "jotai/utils";
 import type { PaletteMode } from "@mui/material";
 import staticCourseData from "../data/course-data.json";
 import { getTodayKey } from "../utils/formatters";
-import type {
-  CourseProgressState,
-  CourseData,
-  Bookmark,
-} from "../types";
+import type { CourseProgressState, CourseData, Bookmark } from "../types";
+import { getIDBValue, setIDBValue, removeIDBValue } from "../utils/idb";
 
 const STORAGE_KEY = "course_tracker_progress";
 const DATA_STORAGE_KEY = "course_tracker_data";
@@ -28,83 +25,77 @@ const defaultProgress: CourseProgressState = {
   dailyWatchLog: [],
 };
 
+// --- Custom IDB Storage for Jotai ---
+const createIDBStorage = <T>(defaultValue: T) => ({
+  getItem: async (key: string): Promise<T> => {
+    // 1. Try IndexedDB
+    const idbValue = await getIDBValue<T>(key);
+    if (idbValue !== null) return idbValue;
+
+    // 2. Fallback/Migration: Try localStorage
+    const localValue = localStorage.getItem(key);
+    if (localValue !== null) {
+      try {
+        const parsed = JSON.parse(localValue);
+        // Move to IDB and cleanup localStorage
+        await setIDBValue(key, parsed);
+        localStorage.removeItem(key);
+        return parsed;
+      } catch (e) {
+        console.error(`Failed to migrate ${key} from localStorage`, e);
+      }
+    }
+
+    return defaultValue;
+  },
+  setItem: async (key: string, value: T): Promise<void> => {
+    await setIDBValue(key, value);
+  },
+  removeItem: async (key: string): Promise<void> => {
+    await removeIDBValue(key);
+  },
+});
+
 // --- Base Atoms with Storage ---
 
-// Atom for the main progress object. We use atomWithStorage to automatically sync with localStorage.
-// We need to provide a custom reviver/loader if we want to merge defaults, or we can ensure defaults are used via a derived atom.
-export const courseProgressStateAtom = atomWithStorage<CourseProgressState>(
+const baseCourseProgressStateAtom = atomWithStorage<CourseProgressState>(
   STORAGE_KEY,
   defaultProgress,
   {
-    getItem: (key) => {
-      const storedValue = localStorage.getItem(key);
-      if (!storedValue) return defaultProgress;
-      try {
-        const parsed = JSON.parse(storedValue);
-        // Merge with defaults to ensure all fields exist
-        return {
-          lastWatchedVideoId: parsed.lastWatchedVideoId || null,
-          videos: parsed.videos || {},
-          settings: {
-            ...defaultProgress.settings,
-            ...(parsed.settings || {}),
-          },
-          bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks : [],
-          dailyWatchLog: Array.isArray(parsed.dailyWatchLog) ? parsed.dailyWatchLog : [],
-        };
-      } catch (e) {
-        console.error("Failed to parse stored progress", e);
-        return defaultProgress;
-      }
-    },
-    setItem: (key, value) => {
-      localStorage.setItem(key, JSON.stringify(value));
-    },
-    removeItem: (key) => {
-      localStorage.removeItem(key);
+    ...createIDBStorage(defaultProgress),
+    getItem: async (key: string) => {
+      const storage = createIDBStorage(defaultProgress);
+      const parsed: any = await storage.getItem(key);
+
+      // Merge with defaults to ensure all fields exist
+      return {
+        lastWatchedVideoId: parsed?.lastWatchedVideoId || null,
+        videos: parsed?.videos || {},
+        settings: {
+          ...defaultProgress.settings,
+          ...(parsed?.settings || {}),
+        },
+        bookmarks: Array.isArray(parsed?.bookmarks) ? parsed.bookmarks : [],
+        dailyWatchLog: Array.isArray(parsed?.dailyWatchLog)
+          ? parsed.dailyWatchLog
+          : [],
+      };
     },
   }
 );
+export const courseProgressStateAtom = unwrap(
+  baseCourseProgressStateAtom,
+  (prev) => prev ?? defaultProgress
+);
 
-// Atom for course data
-export const courseDataStateAtom = atomWithStorage<CourseData>(
+const baseCourseDataStateAtom = atomWithStorage<CourseData>(
   DATA_STORAGE_KEY,
-  staticCourseData as CourseData,
-  {
-    getItem: (key) => {
-      const storedValue = localStorage.getItem(key);
-      if (!storedValue) {
-        // Fallback to legacy key check
-        const oldProgressData = localStorage.getItem(STORAGE_KEY);
-        if (oldProgressData) {
-          try {
-            const parsedOld = JSON.parse(oldProgressData);
-            if (
-              parsedOld.courseData &&
-              Array.isArray(parsedOld.courseData) &&
-              parsedOld.courseData.length > 0
-            ) {
-              localStorage.setItem(key, JSON.stringify(parsedOld.courseData));
-              return parsedOld.courseData as CourseData;
-            }
-          } catch (e) {}
-        }
-        return staticCourseData as CourseData;
-      }
-      try {
-        return JSON.parse(storedValue) as CourseData;
-      } catch (e) {
-        console.error("Failed to parse stored course data", e);
-        return staticCourseData as CourseData;
-      }
-    },
-    setItem: (key, value) => {
-      localStorage.setItem(key, JSON.stringify(value));
-    },
-    removeItem: (key) => {
-      localStorage.removeItem(key);
-    },
-  }
+  staticCourseData as unknown as CourseData,
+  createIDBStorage(staticCourseData as unknown as CourseData)
+);
+export const courseDataStateAtom = unwrap(
+  baseCourseDataStateAtom,
+  (prev) => prev ?? (staticCourseData as unknown as CourseData)
 );
 
 // Atom for theme mode
