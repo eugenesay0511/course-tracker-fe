@@ -1,4 +1,10 @@
-import { useState, forwardRef, useImperativeHandle, useRef } from "react";
+import {
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Box,
   Typography,
@@ -10,7 +16,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   Chip,
 } from "@mui/material";
 import {
@@ -50,8 +55,21 @@ export const BookmarksPanel = forwardRef<
   ) => {
     const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const [note, setNote] = useState("");
     const [snapshotTime, setSnapshotTime] = useState(0);
+
+    const open = Boolean(anchorEl);
+
+    useEffect(() => {
+      if (open) {
+        // Use a small timeout to ensure the Popover has finished opening/mounting
+        const timer = setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
+        return () => clearTimeout(timer);
+      }
+    }, [open]);
 
     const videoBookmarks = bookmarks
       .filter((b) => b.videoId === videoId)
@@ -69,8 +87,6 @@ export const BookmarksPanel = forwardRef<
       setNote("");
       setAnchorEl(null);
     };
-
-    const open = Boolean(anchorEl);
 
     return (
       <>
@@ -112,13 +128,13 @@ export const BookmarksPanel = forwardRef<
             Bookmark at {formatTime(snapshotTime)}
           </Typography>
           <TextField
+            inputRef={inputRef}
             fullWidth
             size="small"
             placeholder="Add a note (optional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            autoFocus
             sx={{ mb: 1.5 }}
           />
           <Button
@@ -156,6 +172,18 @@ export const BookmarksPanel = forwardRef<
                       px: 1,
                     }}
                     onClick={() => onSeek(bm.timestamp)}
+                    secondaryAction={
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveBookmark(bm.id);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    }
                   >
                     <Chip
                       label={formatTime(bm.timestamp)}
@@ -171,24 +199,14 @@ export const BookmarksPanel = forwardRef<
                     />
                     <ListItemText
                       primary={bm.note}
-                      primaryTypographyProps={{
-                        variant: "body2",
-                        noWrap: true,
-                        sx: { maxWidth: 150 },
+                      slotProps={{
+                        primary: {
+                          variant: "body2",
+                          noWrap: true,
+                          sx: { maxWidth: 150 },
+                        },
                       }}
                     />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveBookmark(bm.id);
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </ListItemSecondaryAction>
                   </ListItem>
                 ))}
               </List>
