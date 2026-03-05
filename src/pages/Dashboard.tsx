@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Grid,
-  Paper,
   Card,
   CardContent,
   Button,
@@ -30,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import { useCourseProgress } from "../hooks/useCourseProgress";
 import { formatDuration, formatTime } from "../utils/formatters";
 import type { Chapter } from "../types";
+import { StudyStreakCard } from "../components/StudyStreakCard";
 
 type ChapterStat = Chapter & {
   total: number;
@@ -204,7 +204,7 @@ export const Dashboard: React.FC = () => {
             background: (theme) =>
               theme.palette.mode === "dark"
                 ? "linear-gradient(90deg, #FFFFFF 0%, #CBD5E1 100%)"
-                : "linear-gradient(90deg, #0F172A 0%, #64748B 100%)",
+                : "linear-gradient(90deg, #1E3A8A 0%, #3B82F6 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             lineHeight: 1.2,
@@ -295,13 +295,13 @@ export const Dashboard: React.FC = () => {
                   background:
                     theme.palette.mode === "dark"
                       ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                      : "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+                      : "linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%)",
                   border: 1,
                   borderColor: "divider",
                   boxShadow:
                     theme.palette.mode === "dark"
                       ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
-                      : "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                      : "0 20px 40px -4px rgba(148, 163, 184, 0.25)",
                   borderRadius: 4,
                 })}
               >
@@ -395,13 +395,13 @@ export const Dashboard: React.FC = () => {
                   background:
                     theme.palette.mode === "dark"
                       ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                      : "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+                      : "linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%)",
                   border: 1,
                   borderColor: "divider",
                   boxShadow:
                     theme.palette.mode === "dark"
                       ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
-                      : "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                      : "0 20px 40px -4px rgba(148, 163, 184, 0.25)",
                   borderRadius: 4,
                 })}
               >
@@ -482,13 +482,13 @@ export const Dashboard: React.FC = () => {
               background:
                 theme.palette.mode === "dark"
                   ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                  : "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+                  : "linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%)",
               border: 1,
               borderColor: "divider",
               boxShadow:
                 theme.palette.mode === "dark"
                   ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
-                  : "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                  : "0 20px 40px -4px rgba(148, 163, 184, 0.25)",
               borderRadius: 4,
             })}
           >
@@ -606,90 +606,126 @@ export const Dashboard: React.FC = () => {
           </Card>
         </Grid>
 
+        {/* Study Streak */}
+        <Grid size={{ xs: 12 }}>
+          <StudyStreakCard />
+        </Grid>
+
         {/* Chapter Breakdown */}
         <Grid size={{ xs: 12 }}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Chapter Progress
-            </Typography>
-            <Grid container spacing={2}>
-              {chapterStats.map((stat, idx) => (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
-                  <Box
-                    onClick={() => setSelectedChapter(stat)}
-                    sx={{
-                      mb: 2,
-                      p: 1.5,
-                      borderRadius: 2,
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                        transform: "translateY(-2px)",
-                      },
-                    }}
-                  >
+          <Card
+            sx={(theme) => ({
+              borderRadius: 4,
+              border: 1,
+              borderColor: "divider",
+              background:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
+                  : "linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%)",
+              boxShadow:
+                theme.palette.mode === "dark"
+                  ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
+                  : "0 20px 40px -4px rgba(148, 163, 184, 0.25)",
+            })}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Typography
+                variant="subtitle2"
+                color="primary.main"
+                fontWeight="bold"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  mb: 2,
+                }}
+              >
+                <ChapterIcon sx={{ fontSize: 18 }} />
+                Chapter Progress
+              </Typography>
+              <Grid container spacing={2}>
+                {chapterStats.map((stat, idx) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
                     <Box
+                      onClick={() => setSelectedChapter(stat)}
                       sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                        alignItems: "center",
+                        mb: 2,
+                        p: 1.5,
+                        borderRadius: 2,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          bgcolor: "action.hover",
+                          transform: "translateY(-2px)",
+                        },
                       }}
-                    >
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{ maxWidth: "75%", fontWeight: 600 }}
-                      >
-                        {stat.title}
-                      </Typography>
-                      <Chip
-                        label={`${stat.completed}/${stat.total}`}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          height: 24,
-                          fontSize: "0.8rem",
-                          fontWeight: "bold",
-                          borderColor: "divider",
-                          bgcolor:
-                            stat.completed === stat.total
-                              ? "success.main"
-                              : "transparent",
-                          color:
-                            stat.completed === stat.total
-                              ? "white"
-                              : "text.secondary",
-                        }}
-                      />
-                    </Box>
-                    <Box
-                      sx={(theme) => ({
-                        width: "100%",
-                        height: 6,
-                        bgcolor:
-                          theme.palette.mode === "dark" ? "#1e293b" : "#e2e8f0",
-                        borderRadius: 3,
-                        overflow: "hidden",
-                      })}
                     >
                       <Box
                         sx={{
-                          height: "100%",
-                          bgcolor:
-                            stat.completed === stat.total
-                              ? "#10b981"
-                              : "primary.main",
-                          width: `${stat.total > 0 ? (stat.completed / stat.total) * 100 : 0}%`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                          alignItems: "center",
                         }}
-                      />
+                      >
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{ maxWidth: "75%", fontWeight: 600 }}
+                        >
+                          {stat.title}
+                        </Typography>
+                        <Chip
+                          label={`${stat.completed}/${stat.total}`}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            height: 24,
+                            fontSize: "0.8rem",
+                            fontWeight: "bold",
+                            borderColor: "divider",
+                            bgcolor:
+                              stat.completed === stat.total
+                                ? "success.main"
+                                : "transparent",
+                            color:
+                              stat.completed === stat.total
+                                ? "white"
+                                : "text.secondary",
+                          }}
+                        />
+                      </Box>
+                      <Box
+                        sx={(theme) => ({
+                          width: "100%",
+                          height: 6,
+                          bgcolor:
+                            theme.palette.mode === "dark"
+                              ? "#1e293b"
+                              : "#e2e8f0",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        })}
+                      >
+                        <Box
+                          sx={{
+                            height: "100%",
+                            bgcolor:
+                              stat.completed === stat.total
+                                ? "#10b981"
+                                : "primary.main",
+                            width: `${stat.total > 0 ? (stat.completed / stat.total) * 100 : 0}%`,
+                          }}
+                        />
+                      </Box>
                     </Box>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 

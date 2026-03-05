@@ -20,14 +20,30 @@ export interface VideoProgress {
   completed: boolean;
 }
 
+export interface Bookmark {
+  id: string;
+  videoId: string;
+  timestamp: number;
+  note: string;
+  createdAt: number;
+}
+
+export interface DailyWatchLog {
+  date: string; // "YYYY-MM-DD"
+  watchedSeconds: number;
+}
+
 export interface Settings {
   videoRootPath: string;
   autoplay: boolean;
   outlinePosition: "left" | "right";
+  dailyGoalMinutes: number;
 }
 
 export interface CourseProgressState {
   lastWatchedVideoId: string | null;
   videos: Record<string, VideoProgress>;
   settings: Settings;
+  bookmarks: Bookmark[];
+  dailyWatchLog: DailyWatchLog[];
 }

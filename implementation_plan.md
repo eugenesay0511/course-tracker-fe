@@ -1,4 +1,4 @@
-# Course Tracker Implementation Plan
+# Big Brain Implementation Plan
 
 This document outlines the plan to build a React and MUI frontend wrapper to track and play local videos from the "Udemy - Understanding TypeScript (2026-1)" folder.
 

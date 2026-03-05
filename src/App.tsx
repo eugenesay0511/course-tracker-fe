@@ -1,4 +1,11 @@
-import { useState, useMemo, createContext, useContext } from "react";
+import {
+  useState,
+  useMemo,
+  createContext,
+  useContext,
+  lazy,
+  Suspense,
+} from "react";
 import {
   Box,
   AppBar,
@@ -9,9 +16,9 @@ import {
   Button,
   IconButton,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import {
-  School as SchoolIcon,
   Dashboard as DashboardIcon,
   PlayCircleFilled as PlayCourseIcon,
   LightMode,
@@ -27,11 +34,26 @@ import {
 import type { PaletteMode } from "@mui/material";
 
 import { createAppTheme } from "./theme";
-import { Dashboard } from "./pages/Dashboard";
-import { CoursePlayer } from "./pages/CoursePlayer";
-import { Settings } from "./pages/Settings";
-import { Settings as SettingsIcon } from "@mui/icons-material";
+const Dashboard = lazy(() =>
+  import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
+);
+const CoursePlayer = lazy(() =>
+  import("./pages/CoursePlayer").then((m) => ({ default: m.CoursePlayer })),
+);
+const Settings = lazy(() =>
+  import("./pages/Settings").then((m) => ({ default: m.Settings })),
+);
+const Bookmarks = lazy(() =>
+  import("./pages/Bookmarks").then((m) => ({ default: m.Bookmarks })),
+);
+import { SearchBar } from "./components/SearchBar";
+import { WelcomeScreen } from "./components/WelcomeScreen";
+import {
+  Settings as SettingsIcon,
+  BookmarkBorder as BookmarkIcon,
+} from "@mui/icons-material";
 import { CourseProgressProvider } from "./context/CourseProgressContext";
+import { useCourseProgress } from "./hooks/useCourseProgress";
 
 export const ThemeModeContext = createContext({
   toggleTheme: () => {},
@@ -96,19 +118,19 @@ function Navigation() {
       </Button>
       <Button
         color="inherit"
-        startIcon={<SettingsIcon />}
-        onClick={() => navigate("/settings")}
+        startIcon={<BookmarkIcon />}
+        onClick={() => navigate("/bookmarks")}
         sx={(theme) => ({
           borderRadius: 2,
           px: 2,
           bgcolor:
-            location.pathname === "/settings"
+            location.pathname === "/bookmarks"
               ? theme.palette.mode === "dark"
                 ? "rgba(255, 255, 255, 0.15)"
                 : "rgba(0, 0, 0, 0.1)"
               : "transparent",
-          color: location.pathname === "/settings" ? "white" : "inherit",
-          fontWeight: location.pathname === "/settings" ? 700 : 500,
+          color: location.pathname === "/bookmarks" ? "white" : "inherit",
+          fontWeight: location.pathname === "/bookmarks" ? 700 : 500,
           "&:hover": {
             bgcolor:
               theme.palette.mode === "dark"
@@ -117,7 +139,7 @@ function Navigation() {
           },
         })}
       >
-        Settings
+        Bookmarks
       </Button>
     </Box>
   );
@@ -134,6 +156,105 @@ function ThemeToggle() {
   );
 }
 
+function SettingsButton() {
+  const navigate = useNavigate();
+  return (
+    <Tooltip title="Settings">
+      <IconButton color="inherit" onClick={() => navigate("/settings")}>
+        <SettingsIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+function AppContent() {
+  const { courseData } = useCourseProgress();
+  const hasData = courseData && courseData.length > 0;
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
+      }}
+    >
+      <AppBar position="static" elevation={1}>
+        <Toolbar sx={{ justifyContent: "center" }}>
+          <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
+            <Box
+              component="img"
+              src="/brain.svg"
+              sx={{ width: 32, height: 32, mr: 2 }}
+              alt="Big Brain"
+            />
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ fontWeight: "bold" }}
+            >
+              Big Brain
+            </Typography>
+          </Box>
+          {hasData && <Navigation />}
+          <Box
+            sx={{
+              flex: 1,
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+            }}
+          >
+            {hasData && <SearchBar />}
+            <SettingsButton />
+            <ThemeToggle />
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <Box
+        sx={{
+          flexGrow: 1,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
+          <Suspense
+            fallback={
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            }
+          >
+            {hasData ? (
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/course" element={<CoursePlayer />} />
+                <Route path="/bookmarks" element={<Bookmarks />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            ) : (
+              <Routes>
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<WelcomeScreen />} />
+              </Routes>
+            )}
+          </Suspense>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
 function App() {
   const [mode, setMode] = useState<PaletteMode>(() => {
     const saved = localStorage.getItem("course-tracker-theme-mode");
@@ -156,57 +277,7 @@ function App() {
         <CssBaseline />
         <CourseProgressProvider>
           <BrowserRouter>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100vh",
-                width: "100vw",
-                overflow: "hidden",
-              }}
-            >
-              <AppBar position="static" elevation={1}>
-                <Toolbar sx={{ justifyContent: "center" }}>
-                  <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
-                    <SchoolIcon sx={{ mr: 2 }} />
-                    <Typography
-                      variant="h6"
-                      component="div"
-                      sx={{ fontWeight: "bold" }}
-                    >
-                      Course Tracker
-                    </Typography>
-                  </Box>
-                  <Navigation />
-                  <Box
-                    sx={{
-                      flex: 1,
-                      display: "flex",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <ThemeToggle />
-                  </Box>
-                </Toolbar>
-              </AppBar>
-
-              <Box
-                sx={{
-                  flexGrow: 1,
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <Box sx={{ flexGrow: 1, overflowY: "auto" }}>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/course" element={<CoursePlayer />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Routes>
-                </Box>
-              </Box>
-            </Box>
+            <AppContent />
           </BrowserRouter>
         </CourseProgressProvider>
       </ThemeProvider>

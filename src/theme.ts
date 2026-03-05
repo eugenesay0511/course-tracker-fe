@@ -27,7 +27,7 @@ export const createAppTheme = (mode: PaletteMode) => createTheme({
         main: '#059669', // Darker emerald for contrast
       },
       background: {
-        default: '#f8fafc', // Very soft light gray/blue background
+        default: '#f4f7fb', // Premium soft gray/blue background
         paper: '#ffffff', // Clean white for cards
       },
     }),

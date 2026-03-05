@@ -1,4 +1,4 @@
-# Course Tracker Walkthrough
+# Big Brain Walkthrough
 
 The development of the Typescript Course Video Tracking frontend has been successfully completed. Here is a review of what was accomplished and how you can run it.
 

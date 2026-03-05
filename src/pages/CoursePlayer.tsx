@@ -19,14 +19,21 @@ export const CoursePlayer: React.FC = () => {
     requestPermission,
     setAutoplay,
     setOutlinePosition,
+    addBookmark,
+    removeBookmark,
   } = useCourseProgress() as any;
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string | null>(null);
   const [resolvedSubtitleSrc, setResolvedSubtitleSrc] = useState<string | null>(
     null,
   );
+  const [resolvedForVideoId, setResolvedForVideoId] = useState<string | null>(
+    null,
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const videoIdParam = searchParams.get("v");
+  const seekTimeParam = searchParams.get("t");
+  const initialSeekTime = seekTimeParam ? parseFloat(seekTimeParam) : undefined;
 
   const videoRootPath = progress.settings?.videoRootPath || "";
 
@@ -74,8 +81,50 @@ export const CoursePlayer: React.FC = () => {
     return null;
   }, [activeVideoId, courseData]);
 
-  // Resolve file paths to URLs (Blob URLs for Vercel, @fs for local)
+  // Blob URL cache with LRU eviction — keeps last 20 resolved URLs
+  const MAX_BLOB_CACHE = 20;
+  const blobCacheRef = React.useRef<Map<string, string>>(new Map());
+
+  // Helper to resolve a file path to a blob URL (cached with LRU)
+  const resolveFile = React.useCallback(
+    async (path: string, forceRefresh = false): Promise<string> => {
+      const cache = blobCacheRef.current;
+
+      if (!forceRefresh && cache.has(path)) {
+        // Move to end (most recently used) by deleting and re-inserting
+        const url = cache.get(path)!;
+        cache.delete(path);
+        cache.set(path, url);
+        return url;
+      }
+
+      const parts = path.split(/[/\\]/);
+      let current = rootHandle!;
+      for (let i = 0; i < parts.length - 1; i++) {
+        current = await current.getDirectoryHandle(parts[i]);
+      }
+      const fileHandle = await current.getFileHandle(parts[parts.length - 1]);
+      const file = await fileHandle.getFile();
+      const url = URL.createObjectURL(file);
+
+      // Evict oldest entry if over capacity
+      if (cache.size >= MAX_BLOB_CACHE) {
+        const oldest = cache.keys().next().value;
+        if (oldest) {
+          URL.revokeObjectURL(cache.get(oldest)!);
+          cache.delete(oldest);
+        }
+      }
+      cache.set(path, url);
+      return url;
+    },
+    [rootHandle],
+  );
+
+  // Resolve file paths to URLs (Blob URLs for production, @fs for local dev)
   useEffect(() => {
+    let cancelled = false;
+
     const resolveUrls = async () => {
       if (!activeVideo) {
         setResolvedVideoSrc(null);
@@ -83,59 +132,51 @@ export const CoursePlayer: React.FC = () => {
         return;
       }
 
-      // If we have a rootHandle (File System Access API), use it to create Blob URLs
-      // This is required for Vercel/Production hosting
       if (rootHandle && permissionStatus === "granted") {
         try {
-          const resolveFile = async (path: string) => {
-            const parts = path.split(/[/\\]/);
-            let current = rootHandle;
-            for (let i = 0; i < parts.length - 1; i++) {
-              current = await current.getDirectoryHandle(parts[i]);
-            }
-            const fileHandle = await current.getFileHandle(
-              parts[parts.length - 1],
-            );
-            const file = await fileHandle.getFile();
-            return URL.createObjectURL(file);
-          };
-
           const vUrl = await resolveFile(activeVideo.path);
+          if (cancelled) return;
           setResolvedVideoSrc(vUrl);
+          setResolvedForVideoId(activeVideoId);
 
           if (activeVideo.srtPath) {
             const sUrl = await resolveFile(activeVideo.srtPath);
+            if (cancelled) return;
             setResolvedSubtitleSrc(sUrl);
           } else {
             setResolvedSubtitleSrc(null);
           }
-
-          return () => {
-            URL.revokeObjectURL(vUrl);
-          };
         } catch (err) {
           console.error("Failed to resolve file handles:", err);
-          // Fallback to @fs if handle resolution fails
+          if (!cancelled) {
+            setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
+            setResolvedForVideoId(activeVideoId);
+            setResolvedSubtitleSrc(
+              activeVideo.srtPath
+                ? `/@fs/${videoRootPath}/${activeVideo.srtPath}`
+                : null,
+            );
+          }
+        }
+      } else {
+        if (!cancelled) {
           setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
+          setResolvedForVideoId(activeVideoId);
           setResolvedSubtitleSrc(
             activeVideo.srtPath
               ? `/@fs/${videoRootPath}/${activeVideo.srtPath}`
               : null,
           );
         }
-      } else {
-        // Localhost dev mode fallback or permission not granted yet
-        setResolvedVideoSrc(`/@fs/${videoRootPath}/${activeVideo.path}`);
-        setResolvedSubtitleSrc(
-          activeVideo.srtPath
-            ? `/@fs/${videoRootPath}/${activeVideo.srtPath}`
-            : null,
-        );
       }
     };
 
     resolveUrls();
-  }, [activeVideo, rootHandle, permissionStatus, videoRootPath]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeVideo, rootHandle, permissionStatus, videoRootPath, resolveFile]);
 
   // Flattened video list for sequential navigation
   const allVideos = React.useMemo(() => {
@@ -148,6 +189,17 @@ export const CoursePlayer: React.FC = () => {
       ? allVideos[currentIndex + 1]
       : null;
   const prevVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
+
+  // Prefetch next/prev video blob URLs for instant switching
+  useEffect(() => {
+    if (!rootHandle || permissionStatus !== "granted") return;
+    const toPrefetch = [nextVideo, prevVideo].filter(Boolean);
+    for (const v of toPrefetch) {
+      if (v?.path && !blobCacheRef.current.has(v.path)) {
+        resolveFile(v.path).catch(() => {});
+      }
+    }
+  }, [nextVideo, prevVideo, rootHandle, permissionStatus, resolveFile]);
 
   const handleNext = () =>
     nextVideo && setSearchParams({ v: String(nextVideo.id) });
@@ -259,10 +311,14 @@ export const CoursePlayer: React.FC = () => {
           </Box>
         ) : activeVideoId && activeVideo ? (
           <VideoPlayer
-            key={activeVideoId}
+            key={`${activeVideoId}-${initialSeekTime || ""}`}
             videoId={activeVideoId}
-            videoSrc={resolvedVideoSrc}
-            subtitleSrc={resolvedSubtitleSrc}
+            videoSrc={
+              resolvedForVideoId === activeVideoId ? resolvedVideoSrc : null
+            }
+            subtitleSrc={
+              resolvedForVideoId === activeVideoId ? resolvedSubtitleSrc : null
+            }
             title={activeVideo.title}
             chapterTitle={activeVideo.chapterTitle}
             updateVideoProgress={updateVideoProgress}
@@ -273,6 +329,10 @@ export const CoursePlayer: React.FC = () => {
             hasPrevious={!!prevVideo}
             autoplay={progress.settings?.autoplay}
             onToggleAutoplay={setAutoplay}
+            initialSeekTime={initialSeekTime}
+            bookmarks={progress.bookmarks || []}
+            onAddBookmark={addBookmark}
+            onRemoveBookmark={removeBookmark}
           />
         ) : (
           <Box

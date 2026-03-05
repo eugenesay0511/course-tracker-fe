@@ -10,7 +10,8 @@ import {
   Replay as RestartIcon,
 } from "@mui/icons-material";
 import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
-import type { VideoProgress } from "../types";
+import type { VideoProgress, Bookmark } from "../types";
+import { BookmarksPanel } from "./BookmarksPanel";
 
 // Vidstack Core Imports
 import "@vidstack/react/player/styles/default/theme.css";
@@ -44,6 +45,10 @@ interface VideoPlayerProps {
   hasPrevious?: boolean;
   autoplay?: boolean;
   onToggleAutoplay?: (enabled: boolean) => void;
+  initialSeekTime?: number;
+  bookmarks?: Bookmark[];
+  onAddBookmark?: (videoId: string, timestamp: number, note: string) => void;
+  onRemoveBookmark?: (bookmarkId: string) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -60,6 +65,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   hasPrevious,
   autoplay = false,
   onToggleAutoplay,
+  initialSeekTime,
+  bookmarks = [],
+  onAddBookmark,
+  onRemoveBookmark,
 }) => {
   const playerRef = useRef<MediaPlayerInstance>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
@@ -76,14 +85,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const onCanPlay = useCallback(() => {
     const player = playerRef.current;
     if (player && !playedInitialResumeRef.current) {
-      const savedProgress = getProgress(videoId);
-      if (savedProgress && savedProgress.currentTime > 0) {
-        const percent =
-          savedProgress.currentTime / (savedProgress.duration || 1);
-        if (percent < 0.99) {
-          player.currentTime = savedProgress.currentTime;
-        } else {
-          player.currentTime = 0;
+      // If an initial seek time is specified (e.g. from a bookmark click), use it
+      if (initialSeekTime !== undefined && initialSeekTime > 0) {
+        player.currentTime = initialSeekTime;
+      } else {
+        const savedProgress = getProgress(videoId);
+        if (savedProgress && savedProgress.currentTime > 0) {
+          const percent =
+            savedProgress.currentTime / (savedProgress.duration || 1);
+          if (percent < 0.99) {
+            player.currentTime = savedProgress.currentTime;
+          } else {
+            player.currentTime = 0;
+          }
         }
       }
       playedInitialResumeRef.current = true;
@@ -103,7 +117,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       }, 50);
     }
-  }, [videoId, getProgress]);
+  }, [videoId, getProgress, initialSeekTime]);
 
   useEffect(() => {
     if (!subtitleSrc) {
@@ -113,7 +127,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     // Fetch the SRT file and convert to VTT URL
     fetch(subtitleSrc)
-      .then((res) => res.text())
+      .then((res) => {
+        if (!res.ok) throw new Error("fetch failed");
+        return res.text();
+      })
       .then((srtText) => {
         // Convert SRT to VTT (replace commas with periods in timestamps)
         const vttText =
@@ -123,7 +140,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const url = URL.createObjectURL(blob);
         setVttUrl(url);
       })
-      .catch((err) => console.error("Failed to load subtitles:", err));
+      .catch(() => {
+        // Silently ignore — can happen with stale blob URLs during rapid switching
+      });
 
     return () => {
       // Cleanup previous blob URL
@@ -389,6 +408,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           )}
         </Box>
         <Box sx={{ display: "flex", gap: 1.5, ml: 2, alignItems: "center" }}>
+          {onAddBookmark && onRemoveBookmark && (
+            <BookmarksPanel
+              videoId={videoId}
+              bookmarks={bookmarks}
+              getCurrentTime={() => playerRef.current?.state.currentTime ?? 0}
+              onAddBookmark={onAddBookmark}
+              onRemoveBookmark={onRemoveBookmark}
+              onSeek={(t) => {
+                if (playerRef.current) playerRef.current.currentTime = t;
+              }}
+            />
+          )}
           <Tooltip title="View Keyboard Shortcuts">
             <IconButton
               onClick={() => setShowShortcuts(true)}

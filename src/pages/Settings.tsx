@@ -15,6 +15,7 @@ import {
   DialogContentText,
   DialogActions,
   Divider,
+  Slider,
 } from "@mui/material";
 import {
   Download as ExportIcon,
@@ -22,6 +23,7 @@ import {
   Info as InfoIcon,
   CheckCircle as SuccessIcon,
   DeleteForever as DeleteIcon,
+  Timer as TimerIcon,
 } from "@mui/icons-material";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useCourseProgress } from "../hooks/useCourseProgress";
@@ -36,6 +38,7 @@ export const Settings: React.FC = () => {
     exportProgress,
     importProgress,
     clearProgress,
+    setDailyGoal,
   } = useCourseProgress();
   const [rootPath, setRootPath] = useState(progress.settings.videoRootPath);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -214,6 +217,38 @@ export const Settings: React.FC = () => {
           grant permission. Providing the <b>full absolute path</b> is optional
           but recommended.
         </Alert>
+      </Paper>
+
+      <Paper sx={{ p: 3, mb: 4, border: 1, borderColor: "divider" }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
+          <TimerIcon color="primary" />
+          <Typography variant="h6">Daily Study Goal</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Set a daily watching goal to build your study streak. The streak
+          counter on the Dashboard will track consecutive days you meet this
+          goal.
+        </Typography>
+        <Box sx={{ px: 2 }}>
+          <Typography variant="body1" fontWeight={700} sx={{ mb: 1 }}>
+            {progress.settings.dailyGoalMinutes} minutes per day
+          </Typography>
+          <Slider
+            value={progress.settings.dailyGoalMinutes}
+            onChange={(_e, value) => setDailyGoal(value as number)}
+            min={5}
+            max={120}
+            step={5}
+            marks={[
+              { value: 5, label: "5m" },
+              { value: 30, label: "30m" },
+              { value: 60, label: "1h" },
+              { value: 120, label: "2h" },
+            ]}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(v) => `${v} min`}
+          />
+        </Box>
       </Paper>
 
       <Paper sx={{ p: 3, border: 1, borderColor: "divider" }}>

@@ -1,4 +1,4 @@
-# Course Tracker
+# Big Brain
 
 A comprehensive, local-first web application built with React, Vite, and Material UI to track your progress through video course materials right from your browser. It scans local folders for video files (`.mp4`) and subtitle files (`.srt`), builds an interactive course outline, and automatically tracks where you left off.
 
