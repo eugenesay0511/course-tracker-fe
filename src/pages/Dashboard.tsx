@@ -131,6 +131,7 @@ export const Dashboard: React.FC = () => {
     let lastChapterTitle = "";
     let lastVideoProgressStr = "";
     let lastVideoPercent = 0;
+    let targetVideoId = lastWatchedVideoId || "";
 
     if (lastWatchedVideoId) {
       for (const ch of courseData) {
@@ -151,6 +152,12 @@ export const Dashboard: React.FC = () => {
           break;
         }
       }
+    } else if (courseData.length > 0 && courseData[0].videos.length > 0) {
+      // First start - target the first video
+      const firstVideo = courseData[0].videos[0];
+      lastVideoTitle = firstVideo.title;
+      lastChapterTitle = courseData[0].title;
+      targetVideoId = firstVideo.id;
     }
 
     return {
@@ -158,6 +165,7 @@ export const Dashboard: React.FC = () => {
       lastChapterTitle,
       lastVideoProgressStr,
       lastVideoPercent,
+      targetVideoId,
     };
   }, [courseData, lastWatchedVideoId, videosProgress]);
 
@@ -175,6 +183,7 @@ export const Dashboard: React.FC = () => {
     lastChapterTitle,
     lastVideoProgressStr,
     lastVideoPercent,
+    targetVideoId,
   } = resumeInfo;
 
   const folderName =
@@ -420,7 +429,7 @@ export const Dashboard: React.FC = () => {
                   >
                     {lastWatchedVideoId ? "CONTINUE?" : "GET STARTED"}
                   </Typography>
-                  {lastWatchedVideoId && (
+                  {lastChapterTitle && (
                     <Typography
                       variant="caption"
                       sx={{
@@ -448,42 +457,42 @@ export const Dashboard: React.FC = () => {
                 </Typography>
               </Box>
 
-              <Box
-                sx={{
-                  display: { xs: "none", sm: "flex" },
-                  alignItems: "center",
-                  gap: 3,
-                  mr: 2,
-                }}
-              >
-                <Box sx={{ textAlign: "right" }}>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                      fontWeight: 700,
-                      display: "block",
-                      mb: -0.5,
-                    }}
-                  >
-                    PROGRESS
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "text.primary", fontWeight: 900 }}
-                  >
-                    {lastVideoProgressStr}
-                  </Typography>
+              {lastWatchedVideoId && (
+                <Box
+                  sx={{
+                    display: { xs: "none", sm: "flex" },
+                    alignItems: "center",
+                    gap: 3,
+                    mr: 2,
+                  }}
+                >
+                  <Box sx={{ textAlign: "right" }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                        fontWeight: 700,
+                        display: "block",
+                        mb: -0.5,
+                      }}
+                    >
+                      PROGRESS
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.primary", fontWeight: 900 }}
+                    >
+                      {lastVideoProgressStr}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
+              )}
 
               <Button
                 variant="contained"
                 onClick={() => {
-                  if (lastWatchedVideoId) {
-                    navigate(
-                      `/course?v=${encodeURIComponent(lastWatchedVideoId)}`,
-                    );
+                  if (targetVideoId) {
+                    navigate(`/course?v=${encodeURIComponent(targetVideoId)}`);
                   } else {
                     navigate("/course");
                   }
@@ -499,7 +508,7 @@ export const Dashboard: React.FC = () => {
                   "&:hover": { boxShadow: "none" },
                 }}
               >
-                Resume
+                {lastWatchedVideoId ? "Resume" : "Start"}
               </Button>
             </CardContent>
 
