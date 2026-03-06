@@ -1,81 +1,82 @@
+import Dexie, { type Table } from "dexie";
+import type { VideoProgress, Bookmark, DailyWatchLog } from "../types";
+
 const DB_NAME = "CourseTrackerDB";
-const HANDLES_STORE = "handles";
-const STATE_STORE = "state";
 const HANDLE_KEY = "rootFolderHandle";
 
-const openDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 2); // Bump version for new store
+class CourseTrackerDatabase extends Dexie {
+  handles!: Table<FileSystemDirectoryHandle, string>;
+  state!: Table<any, string>;
+  videoProgress!: Table<VideoProgress, string>;
+  bookmarks!: Table<Bookmark, string>;
+  dailyLogs!: Table<DailyWatchLog, string>;
 
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(HANDLES_STORE)) {
-        db.createObjectStore(HANDLES_STORE);
-      }
-      if (!db.objectStoreNames.contains(STATE_STORE)) {
-        db.createObjectStore(STATE_STORE);
-      }
-    };
+  constructor() {
+    super(DB_NAME);
+    // Use empty strings to signify out-of-line keys, matching the existing schema
+    this.version(2).stores({
+      handles: "",
+      state: "",
+    });
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
+    this.version(3)
+      .stores({
+        videoProgress: "videoId",
+        bookmarks: "id, videoId, timestamp",
+        dailyLogs: "date",
+      })
+      .upgrade(async (tx) => {
+        const oldState = await tx.table("state").get("course_tracker_progress");
+        if (oldState) {
+          if (oldState.videos) {
+            const videoEntries = Object.entries(oldState.videos).map(
+              ([videoId, prog]: any) => ({
+                videoId,
+                currentTime: prog.currentTime,
+                duration: prog.duration,
+                completed: prog.completed,
+              }),
+            );
+            await tx.table("videoProgress").bulkPut(videoEntries);
+          }
+          if (oldState.bookmarks?.length) {
+            await tx.table("bookmarks").bulkPut(oldState.bookmarks);
+          }
+          if (oldState.dailyWatchLog?.length) {
+            await tx.table("dailyLogs").bulkPut(oldState.dailyWatchLog);
+          }
+          delete oldState.videos;
+          delete oldState.bookmarks;
+          delete oldState.dailyWatchLog;
+          await tx.table("state").put(oldState, "course_tracker_progress");
+        }
+      });
+  }
+}
+
+export const db = new CourseTrackerDatabase();
 
 export const setStoredHandle = async (
-  handle: FileSystemDirectoryHandle
+  handle: FileSystemDirectoryHandle,
 ): Promise<void> => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(HANDLES_STORE, "readwrite");
-    const store = tx.objectStore(HANDLES_STORE);
-    const request = store.put(handle, HANDLE_KEY);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
+  await db.handles.put(handle, HANDLE_KEY);
 };
 
 export const getStoredHandle =
   async (): Promise<FileSystemDirectoryHandle | null> => {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(HANDLES_STORE, "readonly");
-      const store = tx.objectStore(HANDLES_STORE);
-      const request = store.get(HANDLE_KEY);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
+    const handle = await db.handles.get(HANDLE_KEY);
+    return handle || null;
   };
 
 export const setIDBValue = async (key: string, value: any): Promise<void> => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STATE_STORE, "readwrite");
-    const store = tx.objectStore(STATE_STORE);
-    const request = store.put(value, key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
+  await db.state.put(value, key);
 };
 
 export const getIDBValue = async <T>(key: string): Promise<T | null> => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STATE_STORE, "readonly");
-    const store = tx.objectStore(STATE_STORE);
-    const request = store.get(key);
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
-  });
+  const value = await db.state.get(key);
+  return value !== undefined ? (value as T) : null;
 };
 
 export const removeIDBValue = async (key: string): Promise<void> => {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STATE_STORE, "readwrite");
-    const store = tx.objectStore(STATE_STORE);
-    const request = store.delete(key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
+  await db.state.delete(key);
 };

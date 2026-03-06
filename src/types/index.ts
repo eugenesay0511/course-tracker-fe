@@ -15,6 +15,7 @@ export interface Chapter {
 export type CourseData = Chapter[];
 
 export interface VideoProgress {
+  videoId: string;
   currentTime: number;
   duration: number;
   completed: boolean;
@@ -43,8 +44,5 @@ export interface Settings {
 
 export interface CourseProgressState {
   lastWatchedVideoId: string | null;
-  videos: Record<string, VideoProgress>;
   settings: Settings;
-  bookmarks: Bookmark[];
-  dailyWatchLog: DailyWatchLog[];
 }

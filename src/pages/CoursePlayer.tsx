@@ -14,14 +14,14 @@ import {
   autoplayAtom,
   outlinePositionAtom,
   playbackSpeedAtom,
-  bookmarksAtom,
-  videosProgressAtom,
   lastWatchedVideoIdAtom,
-  updateVideoProgressAtom,
-  markVideoUncompletedAtom,
-  addBookmarkAtom,
-  removeBookmarkAtom,
+  updateVideoProgress,
+  markVideoUncompleted,
+  addBookmark,
+  removeBookmark,
 } from "../store";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../utils/idb";
 import type { VideoProgress } from "../types";
 
 export const CoursePlayer: React.FC = () => {
@@ -29,23 +29,36 @@ export const CoursePlayer: React.FC = () => {
   const rootHandle = useAtomValue(rootHandleAtom);
   const [permissionStatus, setPermissionStatus] = useAtom(permissionStatusAtom);
   const settings = useAtomValue(settingsAtom);
-  const bookmarks = useAtomValue(bookmarksAtom);
-  const videosProgress = useAtomValue(videosProgressAtom);
-  const lastWatchedVideoId = useAtomValue(lastWatchedVideoIdAtom);
+  const [lastWatchedVideoId, setLastWatchedVideoId] = useAtom(
+    lastWatchedVideoIdAtom,
+  );
+
+  const bookmarksArray = useLiveQuery(() => db.bookmarks.toArray(), []);
+  const videosProgressArray = useLiveQuery(
+    () => db.videoProgress.toArray(),
+    [],
+  );
+
+  const bookmarks = React.useMemo(() => bookmarksArray || [], [bookmarksArray]);
+  const videosProgress = React.useMemo(() => {
+    const dict: Record<string, VideoProgress> = {};
+    if (videosProgressArray) {
+      videosProgressArray.forEach((p: VideoProgress) => {
+        dict[p.videoId] = p;
+      });
+    }
+    return dict;
+  }, [videosProgressArray]);
 
   const setAutoplay = useSetAtom(autoplayAtom);
   const setOutlinePosition = useSetAtom(outlinePositionAtom);
   const setPlaybackSpeed = useSetAtom(playbackSpeedAtom);
-  const updateVideoProgressFn = useSetAtom(updateVideoProgressAtom);
-  const markVideoUncompletedFn = useSetAtom(markVideoUncompletedAtom);
-  const addBookmarkFn = useSetAtom(addBookmarkAtom);
-  const removeBookmarkFn = useSetAtom(removeBookmarkAtom);
 
-  const updateVideoProgress = useCallback(
+  const updateProgressWrapper = useCallback(
     (videoId: string, currentTime: number, duration: number) => {
-      updateVideoProgressFn({ videoId, currentTime, duration });
+      updateVideoProgress({ videoId, currentTime, duration });
     },
-    [updateVideoProgressFn],
+    [],
   );
 
   const getProgress = useCallback(
@@ -55,21 +68,21 @@ export const CoursePlayer: React.FC = () => {
     [videosProgress],
   );
 
-  const markVideoUncompleted = useCallback(
-    (videoId: string) => markVideoUncompletedFn(videoId),
-    [markVideoUncompletedFn],
+  const markVideoUncompletedWrapper = useCallback(
+    (videoId: string) => markVideoUncompleted(videoId),
+    [],
   );
 
-  const addBookmark = useCallback(
+  const addBookmarkWrapper = useCallback(
     (videoId: string, timestamp: number, note: string) => {
-      addBookmarkFn({ videoId, timestamp, note });
+      addBookmark({ videoId, timestamp, note });
     },
-    [addBookmarkFn],
+    [],
   );
 
-  const removeBookmark = useCallback(
-    (bookmarkId: string) => removeBookmarkFn(bookmarkId),
-    [removeBookmarkFn],
+  const removeBookmarkWrapper = useCallback(
+    (bookmarkId: string) => removeBookmark(bookmarkId),
+    [],
   );
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -121,6 +134,13 @@ export const CoursePlayer: React.FC = () => {
       }
     }
   }, [videoIdParam, lastWatchedVideoId, courseData, activeVideoId]);
+
+  // Update last watched video in store whenever active video changes
+  useEffect(() => {
+    if (activeVideoId && activeVideoId !== lastWatchedVideoId) {
+      setLastWatchedVideoId(activeVideoId);
+    }
+  }, [activeVideoId, lastWatchedVideoId, setLastWatchedVideoId]);
 
   // Handle manual video selection (via outline)
   const handleVideoSelect = React.useCallback(
@@ -296,7 +316,7 @@ export const CoursePlayer: React.FC = () => {
           activeVideoId={activeVideoId}
           onVideoSelect={handleVideoSelect}
           getProgress={getProgress}
-          markVideoUncompleted={markVideoUncompleted}
+          markVideoUncompleted={markVideoUncompletedWrapper}
           outlinePosition={settings?.outlinePosition}
           onTogglePosition={setOutlinePosition}
         />
@@ -382,7 +402,7 @@ export const CoursePlayer: React.FC = () => {
             }
             title={activeVideo.title}
             chapterTitle={activeVideo.chapterTitle}
-            updateVideoProgress={updateVideoProgress}
+            updateVideoProgress={updateProgressWrapper}
             getProgress={getProgress}
             onNext={handleNext}
             onPrevious={handlePrevious}
@@ -391,9 +411,9 @@ export const CoursePlayer: React.FC = () => {
             autoplay={settings?.autoplay}
             onToggleAutoplay={setAutoplay}
             initialSeekTime={initialSeekTime}
-            bookmarks={bookmarks || []}
-            onAddBookmark={addBookmark}
-            onRemoveBookmark={removeBookmark}
+            bookmarks={bookmarks}
+            onAddBookmark={addBookmarkWrapper}
+            onRemoveBookmark={removeBookmarkWrapper}
             playbackSpeed={settings?.playbackSpeed ?? 1}
             onChangePlaybackSpeed={setPlaybackSpeed}
           />

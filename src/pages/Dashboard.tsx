@@ -30,12 +30,13 @@ import { useAtomValue } from "jotai";
 import {
   courseDataStateAtom,
   rootHandleAtom,
-  videosProgressAtom,
   lastWatchedVideoIdAtom,
   settingsAtom,
   videoRootPathAtom,
   permissionStatusAtom,
 } from "../store";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../utils/idb";
 import { formatDuration, formatTime } from "../utils/formatters";
 import type { Chapter } from "../types";
 import { StudyStreakCard } from "../components/StudyStreakCard";
@@ -54,7 +55,19 @@ type ChapterStat = Chapter & {
 export const Dashboard: React.FC = () => {
   const courseData = useAtomValue(courseDataStateAtom);
   const rootHandle = useAtomValue(rootHandleAtom);
-  const videosProgress = useAtomValue(videosProgressAtom);
+  const videosProgressArray = useLiveQuery(
+    () => db.videoProgress.toArray(),
+    [],
+  );
+  const videosProgress = useMemo(() => {
+    const dict: Record<string, any> = {};
+    if (videosProgressArray) {
+      videosProgressArray.forEach((p) => {
+        dict[p.videoId] = p;
+      });
+    }
+    return dict;
+  }, [videosProgressArray]);
   const lastWatchedVideoId = useAtomValue(lastWatchedVideoIdAtom);
   const settings = useAtomValue(settingsAtom);
   const navigate = useNavigate();

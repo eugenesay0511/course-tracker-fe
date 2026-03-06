@@ -28,19 +28,18 @@ import {
   Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { useSearchParams } from "react-router-dom";
-import { useAtomValue, useAtom, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   settingsAtom,
   videoRootPathAtom,
   dailyGoalMinutesAtom,
-  courseProgressStateAtom,
   courseDataStateAtom,
   rootHandleAtom,
   permissionStatusAtom,
   clearProgressAtom,
   importProgressAtom,
 } from "../store";
-import { setStoredHandle } from "../utils/idb";
+import { db, setStoredHandle } from "../utils/idb";
 import { getFormattedDateTime } from "../utils/formatters";
 import { scanCourseDirectory } from "../utils/scanner";
 
@@ -54,7 +53,6 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
   const setCourseData = useSetAtom(courseDataStateAtom);
   const setRootHandleState = useSetAtom(rootHandleAtom);
   const setPermissionStatus = useSetAtom(permissionStatusAtom);
-  const [progress] = useAtom(courseProgressStateAtom);
   const courseData = useAtomValue(courseDataStateAtom);
   const clearProgressFn = useSetAtom(clearProgressAtom);
   const importProgressFn = useSetAtom(importProgressAtom);
@@ -69,8 +67,26 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
     }
   };
 
-  const exportProgress = () => {
-    const dataToExport = { ...progress, courseData };
+  const exportProgress = async () => {
+    // Collect all data from Jotai + Dexie
+    const videoProgress = await db.videoProgress.toArray();
+    const bookmarks = await db.bookmarks.toArray();
+    const dailyLogs = await db.dailyLogs.toArray();
+
+    // Convert video bindings array to an object dictionary for simpler JSON structure fallback
+    const videosDict: Record<string, any> = {};
+    videoProgress.forEach((v) => {
+      videosDict[v.videoId] = v;
+    });
+
+    const dataToExport = {
+      settings,
+      videos: videosDict,
+      bookmarks,
+      dailyWatchLog: dailyLogs,
+      courseData,
+    };
+
     const dataStr = JSON.stringify(dataToExport, null, 2);
     const dataUri =
       "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -123,9 +139,10 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const content = e.target?.result as string;
-        if (importProgress(content)) {
+        const res = await importProgress(content);
+        if (res) {
           setSnackbarOpen(true);
         } else {
           setError("Failed to import. Invalid file format.");

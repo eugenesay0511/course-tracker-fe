@@ -1,7 +1,6 @@
 import { atom } from "jotai";
 import { atomWithStorage, unwrap } from "jotai/utils";
 import type { PaletteMode } from "@mui/material";
-import staticCourseData from "../data/course-data.json";
 import { getTodayKey } from "../utils/formatters";
 import type { CourseProgressState, CourseData, Bookmark } from "../types";
 import { getIDBValue, setIDBValue, removeIDBValue } from "../utils/idb";
@@ -13,16 +12,13 @@ const DEFAULT_ROOT_PATH = "";
 
 const defaultProgress: CourseProgressState = {
   lastWatchedVideoId: null,
-  videos: {},
   settings: {
     videoRootPath: DEFAULT_ROOT_PATH,
-    autoplay: false,
+    autoplay: true,
     outlinePosition: "left",
     dailyGoalMinutes: 30,
     playbackSpeed: 1,
   },
-  bookmarks: [],
-  dailyWatchLog: [],
 };
 
 // --- Custom IDB Storage for Jotai ---
@@ -70,38 +66,33 @@ const baseCourseProgressStateAtom = atomWithStorage<CourseProgressState>(
       // Merge with defaults to ensure all fields exist
       return {
         lastWatchedVideoId: parsed?.lastWatchedVideoId || null,
-        videos: parsed?.videos || {},
         settings: {
           ...defaultProgress.settings,
           ...(parsed?.settings || {}),
         },
-        bookmarks: Array.isArray(parsed?.bookmarks) ? parsed.bookmarks : [],
-        dailyWatchLog: Array.isArray(parsed?.dailyWatchLog)
-          ? parsed.dailyWatchLog
-          : [],
       };
     },
-  }
+  },
 );
 export const courseProgressStateAtom = unwrap(
   baseCourseProgressStateAtom,
-  (prev) => prev ?? defaultProgress
+  (prev) => prev ?? defaultProgress,
 );
 
 const baseCourseDataStateAtom = atomWithStorage<CourseData>(
   DATA_STORAGE_KEY,
-  staticCourseData as unknown as CourseData,
-  createIDBStorage(staticCourseData as unknown as CourseData)
+  [] as CourseData,
+  createIDBStorage([] as CourseData),
 );
 export const courseDataStateAtom = unwrap(
   baseCourseDataStateAtom,
-  (prev) => prev ?? (staticCourseData as unknown as CourseData)
+  (prev) => prev ?? ([] as CourseData),
 );
 
 // Atom for theme mode
 export const themeModeAtom = atomWithStorage<PaletteMode>(
   THEME_STORAGE_KEY,
-  "dark"
+  "dark",
 );
 
 // Non-serializable atoms
@@ -119,217 +110,203 @@ export const settingsAtom = atom(
       ...prev,
       settings: { ...prev.settings, ...newSettings },
     });
-  }
+  },
 );
 
 export const videoRootPathAtom = atom(
   (get) => get(settingsAtom).videoRootPath,
   (_, set, videoRootPath: string) => {
     set(settingsAtom, { videoRootPath });
-  }
+  },
 );
 
 export const autoplayAtom = atom(
   (get) => get(settingsAtom).autoplay,
   (_, set, autoplay: boolean) => {
     set(settingsAtom, { autoplay });
-  }
+  },
 );
 
 export const outlinePositionAtom = atom(
   (get) => get(settingsAtom).outlinePosition,
   (_, set, outlinePosition: "left" | "right") => {
     set(settingsAtom, { outlinePosition });
-  }
+  },
 );
 
 export const dailyGoalMinutesAtom = atom(
   (get) => get(settingsAtom).dailyGoalMinutes,
   (_, set, dailyGoalMinutes: number) => {
     set(settingsAtom, { dailyGoalMinutes });
-  }
+  },
 );
 
 export const playbackSpeedAtom = atom(
   (get) => get(settingsAtom).playbackSpeed,
   (_, set, playbackSpeed: number) => {
     set(settingsAtom, { playbackSpeed });
-  }
+  },
 );
 
-// Video Progress specific actions
-export const videosProgressAtom = atom(
-  (get) => get(courseProgressStateAtom).videos
-);
+import { db } from "../utils/idb";
 
-export const updateVideoProgressAtom = atom(
-  null,
-  (get, set, { videoId, currentTime, duration }: { videoId: string; currentTime: number; duration: number }) => {
-    const prev = get(courseProgressStateAtom);
-    const prevVideo = prev.videos[videoId] || {
-      currentTime: 0,
-      duration: 0,
-      completed: false,
-    };
-    const completed =
-      prevVideo.completed ||
-      (duration > 0 && currentTime / duration > 0.95);
+// --- Async Functions for Dexie Operations ---
 
-    // Calculate watch time delta
-    const delta = currentTime - (prevVideo.currentTime || 0);
-    let updatedLog = prev.dailyWatchLog;
-    
-    if (delta > 0 && delta < 5) {
-      const today = getTodayKey();
-      updatedLog = [...prev.dailyWatchLog];
-      const todayIdx = updatedLog.findIndex((e) => e.date === today);
-      if (todayIdx >= 0) {
-        updatedLog[todayIdx] = {
-          ...updatedLog[todayIdx],
-          watchedSeconds: updatedLog[todayIdx].watchedSeconds + delta,
-        };
-      } else {
-        updatedLog.push({ date: today, watchedSeconds: delta });
-      }
-      // Keep only last 90 days
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 90);
-      const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
-      updatedLog = updatedLog.filter((e) => e.date >= cutoffKey);
+export const updateVideoProgress = async ({
+  videoId,
+  currentTime,
+  duration,
+}: {
+  videoId: string;
+  currentTime: number;
+  duration: number;
+}) => {
+  const prevVideo = await db.videoProgress.get(videoId);
+  const completed =
+    prevVideo?.completed || (duration > 0 && currentTime / duration > 0.95);
+
+  const delta = currentTime - (prevVideo?.currentTime || 0);
+
+  if (delta > 0 && delta < 5) {
+    const today = getTodayKey();
+    let todayLog = await db.dailyLogs.get(today);
+    if (todayLog) {
+      await db.dailyLogs.put({
+        date: today,
+        watchedSeconds: todayLog.watchedSeconds + delta,
+      });
+    } else {
+      await db.dailyLogs.put({ date: today, watchedSeconds: delta });
     }
 
-    set(courseProgressStateAtom, {
-      ...prev,
-      lastWatchedVideoId: videoId,
-      videos: {
-        ...prev.videos,
-        [videoId]: { currentTime, duration, completed },
-      },
-      dailyWatchLog: updatedLog,
-    });
+    // Optional: cleanup old logs > 90 days could be done periodically
   }
-);
 
-export const markVideoCompletedAtom = atom(null, (get, set, videoId: string) => {
-  const prev = get(courseProgressStateAtom);
-  set(courseProgressStateAtom, {
-    ...prev,
-    videos: {
-      ...prev.videos,
-      [videoId]: {
-        ...(prev.videos[videoId] || { currentTime: 0, duration: 0 }),
-        completed: true,
-      },
-    },
+  await db.videoProgress.put({
+    videoId,
+    currentTime,
+    duration,
+    completed,
   });
-});
+};
 
-export const markVideoUncompletedAtom = atom(null, (get, set, videoId: string) => {
-  const prev = get(courseProgressStateAtom);
-  set(courseProgressStateAtom, {
-    ...prev,
-    videos: {
-      ...prev.videos,
-      [videoId]: {
-        ...(prev.videos[videoId] || {
-          currentTime: 0,
-          duration: 0,
-          completed: false,
-        }),
-        currentTime: 0,
-        completed: false,
-      },
-    },
+export const markVideoCompleted = async (videoId: string) => {
+  const prevVideo = await db.videoProgress.get(videoId);
+  await db.videoProgress.put({
+    videoId,
+    currentTime: prevVideo?.currentTime || 0,
+    duration: prevVideo?.duration || 0,
+    completed: true,
   });
-});
+};
 
-// Bookmarks
-export const bookmarksAtom = atom(
-  (get) => get(courseProgressStateAtom).bookmarks,
-  (get, set, newBookmarks: Bookmark[]) => {
-    const prev = get(courseProgressStateAtom);
-    set(courseProgressStateAtom, { ...prev, bookmarks: newBookmarks });
-  }
-);
-
-export const addBookmarkAtom = atom(
-  null,
-  (get, set, { videoId, timestamp, note }: { videoId: string; timestamp: number; note: string }) => {
-    const prev = get(courseProgressStateAtom);
-    const newBookmark: Bookmark = {
-      id: crypto.randomUUID(),
+export const markVideoUncompleted = async (videoId: string) => {
+  const prevVideo = await db.videoProgress.get(videoId);
+  if (prevVideo) {
+    await db.videoProgress.put({
       videoId,
-      timestamp,
-      note,
-      createdAt: Date.now(),
-    };
-    set(courseProgressStateAtom, {
-      ...prev,
-      bookmarks: [...prev.bookmarks, newBookmark],
+      currentTime: 0,
+      duration: prevVideo.duration,
+      completed: false,
     });
   }
-);
+};
 
-export const removeBookmarkAtom = atom(null, (get, set, bookmarkId: string) => {
-  const prev = get(courseProgressStateAtom);
-  set(courseProgressStateAtom, {
-    ...prev,
-    bookmarks: prev.bookmarks.filter((b) => b.id !== bookmarkId),
-  });
-});
+export const addBookmark = async ({
+  videoId,
+  timestamp,
+  note,
+}: {
+  videoId: string;
+  timestamp: number;
+  note: string;
+}) => {
+  const newBookmark: Bookmark = {
+    id: crypto.randomUUID(),
+    videoId,
+    timestamp,
+    note,
+    createdAt: Date.now(),
+  };
+  await db.bookmarks.put(newBookmark);
+};
 
-export const updateBookmarkAtom = atom(
-  null,
-  (get, set, { bookmarkId, note }: { bookmarkId: string; note: string }) => {
-    const prev = get(courseProgressStateAtom);
-    set(courseProgressStateAtom, {
-      ...prev,
-      bookmarks: prev.bookmarks.map((b) =>
-        b.id === bookmarkId ? { ...b, note } : b
-      ),
-    });
+export const removeBookmark = async (bookmarkId: string) => {
+  await db.bookmarks.delete(bookmarkId);
+};
+
+export const updateBookmark = async ({
+  bookmarkId,
+  note,
+}: {
+  bookmarkId: string;
+  note: string;
+}) => {
+  const bookmark = await db.bookmarks.get(bookmarkId);
+  if (bookmark) {
+    bookmark.note = note;
+    await db.bookmarks.put(bookmark);
   }
-);
+};
 
 // Helpers
 export const lastWatchedVideoIdAtom = atom(
-  (get) => get(courseProgressStateAtom).lastWatchedVideoId
+  (get) => get(courseProgressStateAtom).lastWatchedVideoId,
+  (get, set, videoId: string | null) => {
+    const prev = get(courseProgressStateAtom);
+    set(courseProgressStateAtom, {
+      ...prev,
+      lastWatchedVideoId: videoId,
+    });
+  },
 );
 
-export const dailyWatchLogAtom = atom(
-  (get) => get(courseProgressStateAtom).dailyWatchLog
-);
-
-// Clear progress
-export const clearProgressAtom = atom(null, (get, set) => {
+// Clear progress goes to Dexie too
+export const clearProgressAtom = atom(null, async (get, set) => {
   const prev = get(courseProgressStateAtom);
   set(courseProgressStateAtom, {
     ...prev,
     lastWatchedVideoId: null,
-    videos: {},
   });
+  await db.videoProgress.clear();
+  await db.bookmarks.clear();
+  await db.dailyLogs.clear();
 });
 
-// Import progress
-export const importProgressAtom = atom(null, (get, set, jsonString: string) => {
-  try {
-    const parsed = JSON.parse(jsonString);
-    if (parsed && typeof parsed === "object" && parsed.videos) {
-      const prev = get(courseProgressStateAtom);
-      set(courseProgressStateAtom, {
-        lastWatchedVideoId: parsed.lastWatchedVideoId || null,
-        videos: parsed.videos || {},
-        settings: { ...prev.settings, ...(parsed.settings || {}) },
-        bookmarks: parsed.bookmarks || prev.bookmarks || [],
-        dailyWatchLog: parsed.dailyWatchLog || prev.dailyWatchLog || [],
-      });
-      if (parsed.courseData && Array.isArray(parsed.courseData)) {
-        set(courseDataStateAtom, parsed.courseData);
+// Import progress logic updated
+export const importProgressAtom = atom(
+  null,
+  async (get, set, jsonString: string) => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (parsed && typeof parsed === "object") {
+        const prev = get(courseProgressStateAtom);
+        set(courseProgressStateAtom, {
+          lastWatchedVideoId: parsed.lastWatchedVideoId || null,
+          settings: { ...prev.settings, ...(parsed.settings || {}) },
+        });
+
+        if (parsed.videos) {
+          const videoArray = Object.entries(parsed.videos).map(
+            ([id, val]: any) => ({
+              videoId: id,
+              ...val,
+            }),
+          );
+          await db.videoProgress.bulkPut(videoArray);
+        }
+        if (parsed.bookmarks) await db.bookmarks.bulkPut(parsed.bookmarks);
+        if (parsed.dailyWatchLog)
+          await db.dailyLogs.bulkPut(parsed.dailyWatchLog);
+
+        if (parsed.courseData && Array.isArray(parsed.courseData)) {
+          set(courseDataStateAtom, parsed.courseData);
+        }
+        return true;
       }
-      return true;
+    } catch (e) {
+      console.error("Failed to import progress", e);
     }
-  } catch (e) {
-    console.error("Failed to import progress", e);
-  }
-  return false;
-});
+    return false;
+  },
+);

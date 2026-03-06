@@ -16,6 +16,8 @@
     "@mui/material": "^7.3.8",
     "@mui/x-charts": "^8.27.0",
     "@vidstack/react": "^1.12.13",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "jotai": "^2.18.0",
     "lucide-react": "^0.576.0",
     "react": "^19.2.0",

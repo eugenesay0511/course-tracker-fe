@@ -24,7 +24,9 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
-import { courseDataStateAtom, bookmarksAtom } from "../store";
+import { courseDataStateAtom } from "../store";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../utils/idb";
 import { formatTime } from "../utils/formatters";
 
 interface SearchResult {
@@ -42,7 +44,8 @@ export const SearchBar: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const courseData = useAtomValue(courseDataStateAtom);
-  const bookmarks = useAtomValue(bookmarksAtom);
+  const bookmarksArray = useLiveQuery(() => db.bookmarks.toArray(), []);
+  const bookmarks = useMemo(() => bookmarksArray || [], [bookmarksArray]);
 
   // Debounce search query by 200ms
   useEffect(() => {

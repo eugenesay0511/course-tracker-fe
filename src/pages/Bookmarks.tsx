@@ -18,18 +18,16 @@ import {
   BookmarkBorder as BookmarkIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useAtomValue, useSetAtom } from "jotai";
-import {
-  courseDataStateAtom,
-  bookmarksAtom,
-  removeBookmarkAtom,
-} from "../store";
+import { useAtomValue } from "jotai";
+import { courseDataStateAtom, removeBookmark } from "../store";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../utils/idb";
 import { formatTime } from "../utils/formatters";
 
 export const Bookmarks: React.FC = () => {
   const courseData = useAtomValue(courseDataStateAtom);
-  const bookmarks = useAtomValue(bookmarksAtom);
-  const removeBookmarkFn = useSetAtom(removeBookmarkAtom);
+  const bookmarksArray = useLiveQuery(() => db.bookmarks.toArray(), []);
+  const bookmarks = useMemo(() => bookmarksArray || [], [bookmarksArray]);
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
 
@@ -248,9 +246,9 @@ export const Bookmarks: React.FC = () => {
                     />
                     <IconButton
                       size="small"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        removeBookmarkFn(bm.id);
+                        await removeBookmark(bm.id);
                       }}
                       sx={{ ml: 1 }}
                     >

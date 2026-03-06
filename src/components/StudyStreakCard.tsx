@@ -11,7 +11,9 @@ import {
   TrendingUp as TrendingIcon,
 } from "@mui/icons-material";
 import { useAtomValue } from "jotai";
-import { dailyWatchLogAtom, dailyGoalMinutesAtom } from "../store";
+import { dailyGoalMinutesAtom } from "../store";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../utils/idb";
 import {
   formatDuration,
   getTodayKey,
@@ -20,7 +22,8 @@ import {
 
 export const StudyStreakCard: React.FC = () => {
   const dailyGoal = useAtomValue(dailyGoalMinutesAtom) || 30;
-  const log = useAtomValue(dailyWatchLogAtom) || [];
+  const logArray = useLiveQuery(() => db.dailyLogs.toArray(), []);
+  const log = useMemo(() => logArray || [], [logArray]);
 
   const today = getTodayKey();
 
