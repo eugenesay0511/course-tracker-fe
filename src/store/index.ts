@@ -19,6 +19,7 @@ const defaultProgress: CourseProgressState = {
     dailyGoalMinutes: 30,
     playbackSpeed: 1,
   },
+  _isLoaded: false,
 };
 
 // --- Custom IDB Storage for Jotai ---
@@ -70,6 +71,7 @@ const baseCourseProgressStateAtom = atomWithStorage<CourseProgressState>(
           ...defaultProgress.settings,
           ...(parsed?.settings || {}),
         },
+        _isLoaded: true,
       };
     },
   },
@@ -79,14 +81,16 @@ export const courseProgressStateAtom = unwrap(
   (prev) => prev ?? defaultProgress,
 );
 
+const EMPTY_COURSE_DATA: CourseData = [];
+
 const baseCourseDataStateAtom = atomWithStorage<CourseData>(
   DATA_STORAGE_KEY,
-  [] as CourseData,
-  createIDBStorage([] as CourseData),
+  EMPTY_COURSE_DATA,
+  createIDBStorage(EMPTY_COURSE_DATA),
 );
 export const courseDataStateAtom = unwrap(
   baseCourseDataStateAtom,
-  (prev) => prev ?? ([] as CourseData),
+  (prev) => prev ?? EMPTY_COURSE_DATA,
 );
 
 // Atom for theme mode
@@ -101,14 +105,21 @@ export const permissionStatusAtom = atom<PermissionState | null>(null);
 
 // --- Derived Atoms (Getters/Setters) ---
 
+export const isStoreLoadedAtom = atom((get) => {
+  const state = get(courseProgressStateAtom);
+  return state._isLoaded === true;
+});
+
 // Settings
 export const settingsAtom = atom(
   (get) => get(courseProgressStateAtom).settings,
   (get, set, newSettings: Partial<CourseProgressState["settings"]>) => {
     const prev = get(courseProgressStateAtom);
+    // Don't update if still loading from storage to prevent overwriting with defaults
+    if (prev?._isLoaded === false) return;
     set(courseProgressStateAtom, {
       ...prev,
-      settings: { ...prev.settings, ...newSettings },
+      settings: { ...(prev?.settings || {}), ...newSettings },
     });
   },
 );
@@ -254,6 +265,7 @@ export const lastWatchedVideoIdAtom = atom(
   (get) => get(courseProgressStateAtom).lastWatchedVideoId,
   (get, set, videoId: string | null) => {
     const prev = get(courseProgressStateAtom);
+    if (prev?._isLoaded === false) return;
     set(courseProgressStateAtom, {
       ...prev,
       lastWatchedVideoId: videoId,
@@ -276,16 +288,10 @@ export const clearProgressAtom = atom(null, async (get, set) => {
 // Import progress logic updated
 export const importProgressAtom = atom(
   null,
-  async (get, set, jsonString: string) => {
+  async (_get, set, jsonString: string) => {
     try {
       const parsed = JSON.parse(jsonString);
       if (parsed && typeof parsed === "object") {
-        const prev = get(courseProgressStateAtom);
-        set(courseProgressStateAtom, {
-          lastWatchedVideoId: parsed.lastWatchedVideoId || null,
-          settings: { ...prev.settings, ...(parsed.settings || {}) },
-        });
-
         if (parsed.videos) {
           const videoArray = Object.entries(parsed.videos).map(
             ([id, val]: any) => ({
@@ -302,6 +308,18 @@ export const importProgressAtom = atom(
         if (parsed.courseData && Array.isArray(parsed.courseData)) {
           set(courseDataStateAtom, parsed.courseData);
         }
+
+        const prev = _get(courseProgressStateAtom);
+        set(courseProgressStateAtom, {
+          ...prev,
+          lastWatchedVideoId: parsed.lastWatchedVideoId || null,
+          settings: {
+            ...(prev?.settings || {}),
+            ...(parsed.settings || {}),
+          },
+          _isLoaded: true,
+        });
+
         return true;
       }
     } catch (e) {

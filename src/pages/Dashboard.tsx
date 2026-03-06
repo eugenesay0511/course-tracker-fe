@@ -242,8 +242,10 @@ export const Dashboard: React.FC = () => {
           "Your browser doesn't support directory scanning. Please update your path manually in Settings.",
         );
       }
-    } catch (err) {
-      console.error("Directory picker error:", err);
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        console.error("Directory picker error:", err);
+      }
     }
   };
 

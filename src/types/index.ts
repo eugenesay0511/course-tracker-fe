@@ -45,4 +45,5 @@ export interface Settings {
 export interface CourseProgressState {
   lastWatchedVideoId: string | null;
   settings: Settings;
+  _isLoaded?: boolean;
 }

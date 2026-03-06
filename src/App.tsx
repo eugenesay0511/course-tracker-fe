@@ -50,6 +50,7 @@ import {
   permissionStatusAtom,
   themeModeAtom,
   courseDataStateAtom,
+  isStoreLoadedAtom,
 } from "./store";
 import { getStoredHandle } from "./utils/idb";
 
@@ -170,10 +171,27 @@ function SettingsButton() {
   );
 }
 function AppContent() {
+  const isStoreLoaded = useAtomValue(isStoreLoadedAtom);
   const courseData = useAtomValue(courseDataStateAtom);
   const hasData = courseData && courseData.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
   const isSettingsOpen = searchParams.get("settings") === "true";
+
+  if (!isStoreLoaded) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          bgcolor: "background.default",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   const closeSettings = () => {
     const nextParams = new URLSearchParams(searchParams);
