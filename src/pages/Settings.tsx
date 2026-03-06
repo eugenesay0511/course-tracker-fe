@@ -14,6 +14,7 @@ import {
   DialogActions,
   Divider,
   Slider,
+  Fade,
 } from "@mui/material";
 import {
   Download as ExportIcon,
@@ -95,6 +96,7 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
+  const [showGuide, setShowGuide] = useState(false);
 
   const handleSavePath = (pathOverride?: string, newCourseData?: any[]) => {
     let pathToSave =
@@ -315,6 +317,62 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
                 >
                   Browse
                 </Button>
+              </Box>
+
+              <Box sx={{ mt: 3 }}>
+                <Button
+                  size="small"
+                  onClick={() => setShowGuide(!showGuide)}
+                  sx={{
+                    textTransform: "none",
+                    color: "text.secondary",
+                    fontWeight: 800,
+                    letterSpacing: 1,
+                    mb: 1,
+                    p: 0,
+                    minWidth: 0,
+                    "&:hover": {
+                      bgcolor: "transparent",
+                      color: "primary.main",
+                    },
+                  }}
+                >
+                  {showGuide
+                    ? "HIDE FOLDER STRUCTURE GUIDE"
+                    : "SHOW FOLDER STRUCTURE GUIDE"}
+                </Button>
+
+                {showGuide && (
+                  <Fade in={showGuide}>
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: "action.hover",
+                        fontFamily: "monospace",
+                        fontSize: "0.75rem",
+                        lineHeight: 1.4,
+                        color: "text.secondary",
+                        border: 1,
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Box
+                        sx={{ color: "text.primary", fontWeight: 700, mb: 0.5 }}
+                      >
+                        Folder Structure:
+                      </Box>
+                      <Box>Root Folder/</Box>
+                      <Box sx={{ pl: 1.5 }}>
+                        <Box>├── Chapter Name/</Box>
+                        <Box sx={{ pl: 1.5 }}>
+                          <Box>├── Video Title.mp4</Box>
+                          <Box>└── Video Title.srt (optional)</Box>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
               </Box>
             </Paper>
           </Box>

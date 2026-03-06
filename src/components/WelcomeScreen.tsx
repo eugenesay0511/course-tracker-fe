@@ -1,5 +1,5 @@
-import React from "react";
-import { Box, Typography, Button, Paper } from "@mui/material";
+import React, { useState } from "react";
+import { Box, Typography, Button, Paper, Fade } from "@mui/material";
 import {
   FolderOpen as FolderIcon,
   PlayCircleFilled as PlayIcon,
@@ -23,6 +23,7 @@ export const WelcomeScreen: React.FC = () => {
   const setCourseData = useSetAtom(courseDataStateAtom);
   const setVideoRootPath = useSetAtom(videoRootPathAtom);
   const navigate = useNavigate();
+  const [showGuide, setShowGuide] = useState(false);
 
   const setRootHandle = (handle: FileSystemDirectoryHandle | null) => {
     setRootHandleState(handle);
@@ -139,11 +140,79 @@ export const WelcomeScreen: React.FC = () => {
               transform: "translateY(-1px)",
             },
             transition: "all 0.2s ease",
-            mb: 5,
+            mb: 4,
           }}
         >
           Select Video Folder
         </Button>
+
+        {/* Folder Structure Guide Toggle */}
+        <Box sx={{ mb: 6, mx: "auto", maxWidth: 460 }}>
+          <Button
+            size="small"
+            onClick={() => setShowGuide(!showGuide)}
+            sx={{
+              textTransform: "none",
+              color: "text.secondary",
+              fontWeight: 700,
+              mb: 1,
+              mx: "auto",
+              display: "flex",
+              "&:hover": { bgcolor: "transparent", color: "primary.main" },
+            }}
+          >
+            {showGuide
+              ? "Hide Folder Guide"
+              : "How should I organize my folders?"}
+          </Button>
+
+          {showGuide && (
+            <Fade in={showGuide}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.6)"
+                      : "rgba(248, 250, 252, 0.8)",
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  fontSize: "0.85rem",
+                  lineHeight: 1.6,
+                  borderStyle: "dashed",
+                  textAlign: "left",
+                }}
+              >
+                <Box sx={{ color: "primary.main", fontWeight: 700 }}>
+                  Course Root Folder/
+                </Box>
+                <Box sx={{ pl: 2 }}>
+                  <Box>├── 01 Introduction/</Box>
+                  <Box sx={{ pl: 2, color: "text.secondary" }}>
+                    <Box>├── Welcome.mp4</Box>
+                    <Box>
+                      └── Welcome.srt{" "}
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{ opacity: 0.6 }}
+                      >
+                        (optional)
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box>├── 02 Basics/</Box>
+                  <Box sx={{ pl: 2, color: "text.secondary" }}>
+                    <Box>├── Setup.mp4</Box>
+                    <Box>└── First Project.mp4</Box>
+                  </Box>
+                  <Box sx={{ opacity: 0.6 }}>└── ...</Box>
+                </Box>
+              </Paper>
+            </Fade>
+          )}
+        </Box>
 
         <Box
           sx={{

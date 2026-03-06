@@ -82,14 +82,14 @@ export const StudyStreakCard: React.FC = () => {
         flexDirection: "column",
         background:
           theme.palette.mode === "dark"
-            ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-            : "linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%)",
+            ? "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)"
+            : "#ffffff",
         border: 1,
         borderColor: "divider",
         boxShadow:
           theme.palette.mode === "dark"
-            ? "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
-            : "0 20px 40px -4px rgba(148, 163, 184, 0.25)",
+            ? "0 10px 40px -10px rgba(0,0,0,0.5)"
+            : "0 10px 40px -10px rgba(0,0,0,0.08)",
         borderRadius: 4,
       })}
     >
@@ -130,57 +130,50 @@ export const StudyStreakCard: React.FC = () => {
           <Box
             sx={{
               display: "flex",
-              flexDirection: "row",
+              flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
-              gap: 3,
-              mb: 3,
-              mt: 1,
+              gap: 1,
+              mb: 4,
+              mt: 2,
             }}
           >
             <Box
               sx={{
-                width: 80,
-                height: 80,
-                borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                bgcolor: streak > 0 ? "rgba(239, 68, 68, 0.1)" : "action.hover",
-                border: 2,
-                borderColor: streak > 0 ? "#ef4444" : "divider",
-                flexShrink: 0,
-              }}
-            >
-              <FireIcon
-                sx={{
-                  fontSize: 40,
-                  color: streak > 0 ? "#ef4444" : "text.disabled",
-                }}
-              />
-            </Box>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
+                gap: 1,
               }}
             >
               <Typography
-                variant="h3"
+                variant="h1"
                 fontWeight={900}
-                sx={{ lineHeight: 1.1 }}
+                sx={{
+                  lineHeight: 1.1,
+                  color: streak > 0 ? "text.primary" : "text.secondary",
+                }}
               >
                 {streak}
               </Typography>
-              <Typography
-                variant="subtitle1"
-                color="text.secondary"
-                fontWeight="bold"
-              >
-                {streak === 1 ? "Day Streak" : "Day Streak"}
-              </Typography>
+              <FireIcon
+                sx={{
+                  fontSize: 36,
+                  color: streak > 0 ? "#ef4444" : "text.disabled",
+                  filter:
+                    streak > 0
+                      ? "drop-shadow(0 4px 12px rgba(239, 68, 68, 0.4))"
+                      : "none",
+                }}
+              />
             </Box>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              fontWeight="bold"
+              sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+            >
+              Day Streak
+            </Typography>
           </Box>
 
           {/* Today's Progress */}
@@ -294,6 +287,7 @@ export const StudyStreakCard: React.FC = () => {
             {/* Motivation message */}
             <Typography
               variant="body2"
+              align="center"
               sx={{
                 fontWeight: 600,
                 color: goalReached ? "success.main" : "text.secondary",

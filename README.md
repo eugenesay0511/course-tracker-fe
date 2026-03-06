@@ -1,88 +1,97 @@
 # WatchFlow
 
-A comprehensive, local-first web application built with React 19, Vite, and Material UI to track your progress through video course materials right from your browser. It scans local folders for video files (`.mp4`) and subtitle files (`.srt`), builds an interactive course outline, and automatically tracks your learning journey.
+![WatchFlow Dashboard](./dashboard_streak.png)
 
-## 🚀 Features
+WatchFlow is a premium, **local-first** web application designed to help you organize and track your progress through video course materials. Built with **React 19**, **Vite**, and **Material UI 6**, it leverages the modern **File System Access API** to scan your local folders and build an interactive learning experience without ever uploading a single file.
 
-- **Local File Scanning**: Point the app to a local folder via the File System Access API. It automatically builds a course curriculum from subfolders (Chapters) and video files. No uploads required!
-- **Rich Dashboard**: Visualize your progress with interactive charts, track total learning time, and quickly resume your last watched video.
-- **Study Streaks**: Set a daily watching goal and build your learning streak. The app tracking consecutive days you've reached your target.
-- **Bookmarks & Notes**: Save specific timestamps with notes while watching using keyboard shortcut **'B'**. Easily search and jump back to key moments from the Bookmarks page.
-- **Smart Completion**: Videos are automatically marked as completed when you reach 95% of the total duration.
-- **Customizable Experience**: Toggle between Light and Dark modes, and choose your preferred Course Outline position (Left or Right).
-- **Playback Speed Control**: Adjust video playback speed (0.5x–2x) with a single click or keyboard shortcuts (`+`/`-`). Your preferred speed persists across videos and sessions.
-- **Settings Dialog**: Manage your course path, study goals, and data export/import through a polished, compact preferences window.
-- **Data Export & Import**: Backup your learning progress as a JSON file (with automatic date/time stamps), and restore it on another machine.
-- **Performance Optimized**: Built with atomic state management to ensure smooth video playback and zero UI jank.
+## 🚀 Key Features
 
-## 🧠 How It Works (Project Logic)
+- **📂 Instant Local Scanning**: Point WatchFlow to any local folder. It automatically builds a full course curriculum by scanning subfolders (Chapters), videos (`.mp4`), and subtitles (`.srt`).
+- **📊 Interactive Dashboard**: Visualize your progress with beautiful MUI X Charts. Track total learning time, completion percentages, and daily activity at a glance.
+- **🔥 Study Streaks & Goals**: Stay motivated with daily study goals. The app tracks your consistency and rewards you with a "Day Streak" for meeting your targets.
+- **🔖 Bookmarks & Notes**: Save critical moments with a single keystroke (**'B'**). Add notes to bookmarks and jump back to exact timestamps instantly.
+- **🎯 Smart Progress Tracking**: Videos are automatically marked as "Completed" once you reach 95% duration. Your progress is saved as you watch.
+- **⚡ High-Performance Player**: Powered by **Vidstack**, the player supports persistent playback speeds (0.5x–2x), automatic resuming, and gapless navigation.
+- **🌗 Luxury UI**: A fully responsive, premium design with seamless Light and Dark mode transitions, glassmorphic effects, and customizable layouts (Course Outline on left or right).
 
-### 1. Directory Scanning (`src/utils/scanner.ts`)
+## 🧠 Technical Excellence (Project Architecture)
 
-The application uses the modern [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) (`window.showDirectoryPicker()`) to securely ask the user for permission to read a folder.
-When a folder is selected, the scanner recursively crawls through the subdirectories. It groups `.mp4` files into "Chapters" based on their parent folder name, and attaches `.srt` subtitle files if they share the same base name.
+### 1. Local-First & Private
 
-### 2. Atomic State Management (`src/store/index.ts`)
+WatchFlow operates entirely in your browser. Using the **File System Access API**, it creates secure, temporary Web URLs (Blobs) for your local files. No data is sent to a server, ensuring your course materials remain 100% private.
 
-The app uses **Jotai** for global state management. Unlike traditional context providers, Jotai uses an "atomic" approach where state is broken down into small, independent pieces (atoms):
+### 2. Atomic State Management (Jotai)
 
-- **`courseDataAtom`**: The generated nested array of Chapters and Videos.
-- **`progressAtom`**: A dictionary tracking the `currentTime`, `duration`, `completed` status, `bookmarks`, and `dailyWatchLog`.
-- **`rootHandleAtom`**: The browser's active security permission object (`FileSystemDirectoryHandle`).
-- **`themeModeAtom`**: Manages Light/Dark mode transitions purely through atomic state.
+The application uses **Jotai** for fine-grained state management. By breaking state into independent "atoms" (e.g., `progressAtom`, `themeAtom`), we ensure that high-frequency updates—like video time tracking—never cause unnecessary re-renders in the sidebar, navigation, or dashboard.
 
-This ensures that high-frequency updates (like the video progress updating every second) do not trigger unnecessary re-renders in unrelated components like the Sidebar or Navigation bar.
+### 3. Dual-Layer Persistence (IndexedDB + localStorage)
 
-### 3. Data Persistence (`localStorage` & `IndexedDB`)
+To ensure zero data loss and maximum performance:
 
-To ensure you never lose your progress when you close the tab:
+- **IndexedDB**: Handles heavy lifting like storing your course structure, detailed watch logs, and secure File System handles. This allows for asynchronous, non-blocking I/O.
+- **localStorage**: Stores lightweight, instant-access settings like theme preferences and layout positions.
 
-- **Watch Progress & Course Data**: Stored in **IndexedDB** (`src/utils/idb.ts`) to handle high-frequency updates and bypass `localStorage` size limits. This ensures video progress saves are asynchronous and non-blocking.
-- **Settings & Theme**: Small, stable preferences (like Light/Dark mode and autoplay) are kept in **localStorage** for instant access on startup.
-- **Security Permissions**: The browser's `rootHandle` is saved in **IndexedDB**. This allows the app to remember and restore access to your local folders across sessions.
+### 4. Performance Optimizations
 
-### 4. Local File Playback (`src/pages/CoursePlayer.tsx`)
+- **Throttled Updates**: Video progress updates are throttled to once per second to reduce CPU overhead.
+- **Prefetching**: WatchFlow intelligently prefetches the next video in your course for instant, zero-buffering transitions.
+- **Virtualization**: The course outline and dashboard grids are optimized to handle massive courses with hundreds of videos without dropping a frame.
 
-Playing local files from a web context is usually blocked by security rules. WatchFlow solves this:
+## ⌨️ Keyboard Shortcuts
 
-- **Blob URLs**: When you select a folder, the App gets a `FileSystemDirectoryHandle`. The `CoursePlayer` uses this to create **Temporary Web URLs** (`blob:http://...`) using `URL.createObjectURL(file)`.
-- **Permission Restoration**: Browsers wipe file permissions on refresh. WatchFlow detects this and shows a "Restore Access" overlay, allowing you to re-grant permission with a single click.
-- **Prefetching**: The player automatically prefetches the next and previous video blobs for instant, gapless navigation.
+Focus the player to use these powerful shortcuts:
+
+| Key           | Action                             |
+| :------------ | :--------------------------------- |
+| `Space` / `K` | Play / Pause                       |
+| `F`           | Toggle Fullscreen                  |
+| `B`           | Add Bookmark at current time       |
+| `←` / `J`     | Rewind 5 seconds                   |
+| `→` / `L`     | Fast Forward 5 seconds             |
+| `+` / `-`     | Increase / Decrease Playback Speed |
+| `.` / `>`     | Next Video                         |
+| `,` / `<`     | Previous Video                     |
+| `M`           | Mute / Unmute                      |
+| `C`           | Toggle Subtitles                   |
+| `?`           | Show All Shortcuts                 |
 
 ## 🛠️ Setup & Installation
 
 ### Prerequisites
 
 - Node.js (v18+)
-- A local folder containing your video course materials.
+- A local folder with video files (`.mp4`)
 
-### Getting Started
+### Installation
 
-1. **Clone and Install**
+1. **Clone the repository**
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm install
-```
+### Quick Start
 
-2. **Run Development Server**
-
-```bash
-npm run dev
-```
-
-3. **Configure Your Course**
-   - Open the app in your browser.
-   - Click the **Settings icon** (cogwheel) in the top-right header.
-   - Click **Browse** and select the root directory of your video course.
-   - Set your **Daily Study Goal** to start tracking your streak.
+1. Open the app and click the **Settings** (cog icon) in the header.
+2. Click **Browse** and select your course root folder.
+3. Grant permissions in the browser popup (WatchFlow only asks for Read access).
+4. Start learning!
 
 ## 📦 Tech Stack
 
-- **React 19**: Modern UI development.
-- **Vite**: Ultra-fast build tool and dev server.
-- **Material UI (MUI) v6**: Premium, responsive component library.
-- **Jotai**: Fine-grained atomic state management.
-- **MUI X Charts**: Interactive progress visualization.
-- **Vidstack**: High-performance video player framework.
-- **File System Access API**: Secure local file interaction.
-- **IndexedDB**: Persistent storage for file handles.
+- **Framework**: [React 19](https://react.dev/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **UI & Icons**: [Material UI 6](https://mui.com/), [Lucide React](https://lucide.dev/)
+- **State**: [Jotai](https://jotai.org/)
+- **Video Player**: [Vidstack](https://vidstack.io/)
+- **Charts**: [MUI X Charts](https://mui.com/x/react-charts/)
+- **Storage**: [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+
+---
+
+Built with ❤️ for learners who value Privacy and Performance.

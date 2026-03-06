@@ -481,44 +481,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               }}
             />
           )}
-          {/* Speed */}
-          <Tooltip title={`Playback Speed: ${playbackSpeed}x`}>
-            <IconButton
-              onClick={() => {
-                const idx = SPEED_OPTIONS.indexOf(playbackSpeed);
-                const nextIdx =
-                  idx === -1
-                    ? SPEED_OPTIONS.indexOf(1)
-                    : (idx + 1) % SPEED_OPTIONS.length;
-                const nextSpeed = SPEED_OPTIONS[nextIdx];
-                onChangePlaybackSpeed?.(nextSpeed);
-                const p = playerRef.current;
-                if (p) p.playbackRate = nextSpeed;
-              }}
-              size="small"
-              sx={{
-                bgcolor: playbackSpeed !== 1 ? "primary.main" : "action.hover",
-                color:
-                  playbackSpeed !== 1 ? "primary.contrastText" : "text.primary",
-                "&:hover": {
-                  bgcolor:
-                    playbackSpeed !== 1 ? "primary.dark" : "action.selected",
-                },
-                borderRadius: 2,
-                minWidth: 38,
-                height: 34,
-                px: 1,
-              }}
-            >
-              <Typography
-                variant="caption"
-                fontWeight="bold"
-                sx={{ fontSize: "0.8rem", lineHeight: 1 }}
-              >
-                {playbackSpeed}x
-              </Typography>
-            </IconButton>
-          </Tooltip>
           {/* Autoplay */}
           <Tooltip title={autoplay ? "Autoplay is on" : "Autoplay is off"}>
             <Box
@@ -580,6 +542,45 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </Box>
             </Box>
           </Tooltip>
+          {/* Speed */}
+          <Tooltip title={`Playback Speed: ${playbackSpeed}x`}>
+            <IconButton
+              onClick={() => {
+                const idx = SPEED_OPTIONS.indexOf(playbackSpeed);
+                const nextIdx =
+                  idx === -1
+                    ? SPEED_OPTIONS.indexOf(1)
+                    : (idx + 1) % SPEED_OPTIONS.length;
+                const nextSpeed = SPEED_OPTIONS[nextIdx];
+                onChangePlaybackSpeed?.(nextSpeed);
+                const p = playerRef.current;
+                if (p) p.playbackRate = nextSpeed;
+              }}
+              size="small"
+              sx={{
+                bgcolor: playbackSpeed !== 1 ? "primary.main" : "action.hover",
+                color:
+                  playbackSpeed !== 1 ? "primary.contrastText" : "text.primary",
+                "&:hover": {
+                  bgcolor:
+                    playbackSpeed !== 1 ? "primary.dark" : "action.selected",
+                },
+                borderRadius: 2,
+                minWidth: 38,
+                height: 34,
+                px: 1,
+              }}
+            >
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                sx={{ fontSize: "0.8rem", lineHeight: 1 }}
+              >
+                {playbackSpeed}x
+              </Typography>
+            </IconButton>
+          </Tooltip>
+
           {/* Restart */}
           <Tooltip title="Restart Video">
             <IconButton

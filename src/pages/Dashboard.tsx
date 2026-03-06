@@ -24,7 +24,7 @@ import {
   FolderOpen as ChapterIcon,
   AccessTime as ClockIcon,
 } from "@mui/icons-material";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useAtomValue } from "jotai";
 import {
@@ -33,10 +33,15 @@ import {
   videosProgressAtom,
   lastWatchedVideoIdAtom,
   settingsAtom,
+  videoRootPathAtom,
+  permissionStatusAtom,
 } from "../store";
 import { formatDuration, formatTime } from "../utils/formatters";
 import type { Chapter } from "../types";
 import { StudyStreakCard } from "../components/StudyStreakCard";
+import { scanCourseDirectory } from "../utils/scanner";
+import { setStoredHandle } from "../utils/idb";
+import { useSetAtom } from "jotai";
 
 type ChapterStat = Chapter & {
   total: number;
@@ -53,7 +58,11 @@ export const Dashboard: React.FC = () => {
   const lastWatchedVideoId = useAtomValue(lastWatchedVideoIdAtom);
   const settings = useAtomValue(settingsAtom);
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const setVideoRootPath = useSetAtom(videoRootPathAtom);
+  const setCourseData = useSetAtom(courseDataStateAtom);
+  const setRootHandleState = useSetAtom(rootHandleAtom);
+  const setPermissionStatus = useSetAtom(permissionStatusAtom);
+
   const [selectedChapter, setSelectedChapter] = useState<ChapterStat | null>(
     null,
   );
@@ -125,7 +134,7 @@ export const Dashboard: React.FC = () => {
 
     if (lastWatchedVideoId) {
       for (const ch of courseData) {
-        const v = ch.videos.find((v) => v.id === lastWatchedVideoId);
+        const v = ch.videos.find((video) => video.id === lastWatchedVideoId);
         if (v) {
           lastVideoTitle = v.title;
           lastChapterTitle = ch.title;
@@ -155,6 +164,7 @@ export const Dashboard: React.FC = () => {
   const {
     totalVideos,
     completedVideos,
+    inProgressVideos,
     totalWatchedTime,
     remainingVideos,
     chapterStats,
@@ -172,6 +182,48 @@ export const Dashboard: React.FC = () => {
     (settings?.videoRootPath
       ? settings.videoRootPath.split(/[/\\]/).filter(Boolean).pop()
       : null);
+
+  const handleBrowseAndScan = async () => {
+    try {
+      if ("showDirectoryPicker" in window) {
+        // @ts-ignore
+        const handle = await (window as any).showDirectoryPicker();
+        if (handle) {
+          const folderName = handle.name;
+          let newPath = folderName;
+
+          const currentVal = settings.videoRootPath.trim();
+          if (currentVal) {
+            const strippedVal = currentVal.replace(/^["']|["']$/g, "");
+            const lastSlash = Math.max(
+              strippedVal.lastIndexOf("/"),
+              strippedVal.lastIndexOf("\\"),
+            );
+            if (lastSlash !== -1) {
+              const baseDir = strippedVal.substring(0, lastSlash + 1);
+              newPath = baseDir + folderName;
+            }
+          }
+
+          setRootHandleState(handle);
+          setStoredHandle(handle).catch((err) =>
+            console.error("Failed to store handle in IDB:", err),
+          );
+          setPermissionStatus("granted");
+
+          const scannedData = await scanCourseDirectory(handle);
+          setVideoRootPath(newPath);
+          setCourseData(scannedData);
+        }
+      } else {
+        alert(
+          "Your browser doesn't support directory scanning. Please update your path manually in Settings.",
+        );
+      }
+    } catch (err) {
+      console.error("Directory picker error:", err);
+    }
+  };
 
   return (
     <Box
@@ -247,12 +299,7 @@ export const Dashboard: React.FC = () => {
                 bgcolor: "action.hover",
               },
             }}
-            onClick={() => {
-              const nextParams = new URLSearchParams(searchParams);
-              nextParams.set("settings", "true");
-              nextParams.set("action", "select-folder");
-              setSearchParams(nextParams);
-            }}
+            onClick={handleBrowseAndScan}
           >
             <ChapterIcon sx={{ fontSize: 20, color: "primary.main" }} />
             <Typography
@@ -296,7 +343,7 @@ export const Dashboard: React.FC = () => {
         )}
       </Box>
 
-      <Grid container spacing={3} sx={{ mt: 2 }}>
+      <Grid container spacing={3} sx={{ mt: 2, alignItems: "stretch" }}>
         {/* Quick Resume Banner */}
         <Grid size={{ xs: 12 }}>
           <Card
@@ -304,159 +351,130 @@ export const Dashboard: React.FC = () => {
             sx={(theme) => ({
               position: "relative",
               overflow: "hidden",
-              display: "flex",
-              flexDirection: { xs: "column", md: "row" },
-              alignItems: "center",
-              background:
-                theme.palette.mode === "dark"
-                  ? "linear-gradient(120deg, #1e293b 0%, #172554 100%)"
-                  : "linear-gradient(120deg, #eff6ff 0%, #dbeafe 100%)",
-              borderRadius: 4,
+              borderRadius: 3,
               border: 1,
               borderColor: "divider",
+              bgcolor:
+                theme.palette.mode === "dark" ? "background.paper" : "#ffffff",
+              backgroundImage:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03))"
+                  : "none",
+              boxShadow:
+                theme.palette.mode === "dark"
+                  ? "0 4px 20px rgba(0,0,0,0.4)"
+                  : "0 4px 20px rgba(0,0,0,0.04)",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 8px 30px rgba(0,0,0,0.5)"
+                    : "0 8px 30px rgba(0,0,0,0.08)",
+              },
             })}
           >
-            {/* Decorative background elements */}
-            <Box
-              sx={{
-                position: "absolute",
-                top: -100,
-                right: -50,
-                width: 300,
-                height: 300,
-                borderRadius: "50%",
-                background: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%)"
-                    : "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(255,255,255,0) 70%)",
-                zIndex: 0,
-              }}
-            />
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: -50,
-                left: "20%",
-                width: 200,
-                height: 200,
-                borderRadius: "50%",
-                background: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(0,0,0,0) 70%)"
-                    : "radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(255,255,255,0) 70%)",
-                zIndex: 0,
-              }}
-            />
-
             <CardContent
               sx={{
-                flexGrow: 1,
+                p: "14px 24px !important",
                 display: "flex",
-                flexDirection: { xs: "column", md: "row" },
-                alignItems: { xs: "flex-start", md: "center" },
-                justifyContent: "space-between",
-                p: { xs: 3, md: 5 },
-                gap: 4,
-                width: "100%",
-                zIndex: 1,
-                "&:last-child": { pb: { xs: 3, md: 5 } },
+                alignItems: "center",
+                gap: 2.5,
               }}
             >
-              <Box sx={{ flexGrow: 1, width: { xs: "100%", md: "auto" } }}>
-                <Typography
-                  variant="subtitle2"
-                  color="primary.main"
-                  fontWeight="bold"
+              <Box
+                sx={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "primary.main",
+                  color: "white",
+                  flexShrink: 0,
+                  boxShadow: "0 4px 12px rgba(59, 130, 246, 0.4)",
+                }}
+              >
+                <PlayIcon sx={{ fontSize: 24 }} />
+              </Box>
+
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 1,
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    mb: 1.5,
+                    gap: 1.5,
+                    mb: 0.2,
                   }}
                 >
-                  <PlayIcon sx={{ fontSize: 20 }} />
-                  {lastWatchedVideoId ? "Jump Back In" : "Ready to Start?"}
-                </Typography>
-
-                {lastWatchedVideoId && (
                   <Typography
                     variant="caption"
-                    color="text.secondary"
                     sx={{
-                      display: "block",
-                      mb: 0.5,
+                      fontWeight: 800,
+                      color: "primary.main",
                       textTransform: "uppercase",
                       letterSpacing: 1,
-                      fontWeight: 700,
+                      fontSize: "0.7rem",
                     }}
                   >
-                    {lastChapterTitle}
+                    {lastWatchedVideoId ? "CONTINUE?" : "GET STARTED"}
                   </Typography>
-                )}
-
+                  {lastWatchedVideoId && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                        fontWeight: 600,
+                        fontSize: "0.7rem",
+                        opacity: 0.7,
+                      }}
+                    >
+                      • {lastChapterTitle}
+                    </Typography>
+                  )}
+                </Box>
                 <Typography
-                  variant="h4"
-                  color="text.primary"
+                  variant="body1"
+                  noWrap
                   sx={{
-                    mt: 0.5,
-                    fontWeight: 900,
-                    lineHeight: 1.2,
-                    letterSpacing: "-0.5px",
+                    fontWeight: 850,
+                    color: "text.primary",
+                    fontSize: "1rem",
+                    letterSpacing: "-0.2px",
                   }}
                 >
                   {lastVideoTitle}
                 </Typography>
+              </Box>
 
-                {lastWatchedVideoId && (
-                  <Box sx={{ mt: 3, maxWidth: 500 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontWeight={600}
-                      >
-                        Current Progress
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="primary.main"
-                        fontWeight={800}
-                      >
-                        {lastVideoProgressStr}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 8,
-                        bgcolor: (theme) =>
-                          theme.palette.mode === "dark"
-                            ? "rgba(255,255,255,0.1)"
-                            : "rgba(0,0,0,0.05)",
-                        borderRadius: 4,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          height: "100%",
-                          background:
-                            "linear-gradient(90deg, #3b82f6, #8b5cf6)",
-                          width: `${lastVideoPercent}%`,
-                          borderRadius: 4,
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                )}
+              <Box
+                sx={{
+                  display: { xs: "none", sm: "flex" },
+                  alignItems: "center",
+                  gap: 3,
+                  mr: 2,
+                }}
+              >
+                <Box sx={{ textAlign: "right" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      fontWeight: 700,
+                      display: "block",
+                      mb: -0.5,
+                    }}
+                  >
+                    PROGRESS
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "text.primary", fontWeight: 900 }}
+                  >
+                    {lastVideoProgressStr}
+                  </Typography>
+                </Box>
               </Box>
 
               <Button
@@ -471,27 +489,42 @@ export const Dashboard: React.FC = () => {
                   }
                 }}
                 sx={{
-                  borderRadius: 3,
-                  py: 1.8,
-                  px: 5,
+                  borderRadius: "100px",
+                  py: 1,
+                  px: 4,
                   fontWeight: 800,
                   textTransform: "none",
-                  fontSize: "1.1rem",
-                  flexShrink: 0,
-                  width: { xs: "100%", md: "auto" },
-                  background:
-                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                  boxShadow: "0 10px 20px -10px rgba(37, 99, 235, 0.5)",
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 14px 28px -10px rgba(37, 99, 235, 0.6)",
-                  },
+                  boxShadow: "none",
+                  fontSize: "0.85rem",
+                  "&:hover": { boxShadow: "none" },
                 }}
               >
-                {lastWatchedVideoId ? "Resume Learning" : "Start Course"}
+                Resume
               </Button>
             </CardContent>
+
+            {/* Subtle bottom progress line integrated into the card edge */}
+            {lastWatchedVideoId && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: "action.hover",
+                }}
+              >
+                <Box
+                  sx={{
+                    height: "100%",
+                    bgcolor: "primary.main",
+                    width: `${lastVideoPercent}%`,
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </Box>
+            )}
           </Card>
         </Grid>
 
@@ -563,6 +596,12 @@ export const Dashboard: React.FC = () => {
                               color: "#10b981",
                             },
                             {
+                              id: 1,
+                              value: inProgressVideos,
+                              label: "In Progress",
+                              color: "#3b82f6",
+                            },
+                            {
                               id: 2,
                               value: remainingVideos,
                               label: "Remaining",
@@ -579,18 +618,17 @@ export const Dashboard: React.FC = () => {
                       width={300}
                       height={180}
                       margin={{ right: 5 }}
-                      slotProps={
-                        {
-                          legend: { hidden: true },
-                        } as any
-                      }
+                      // hideLegend
                     />
                   </Box>
                   <Typography
                     variant="body2"
-                    color="text.secondary"
                     align="center"
-                    sx={{ mt: 2, fontWeight: 500 }}
+                    sx={{
+                      color: "rgba(255,255,255,0.7)",
+                      mt: 2,
+                      fontWeight: 500,
+                    }}
                   >
                     {completedVideos} of {totalVideos} videos done
                   </Typography>
@@ -628,9 +666,9 @@ export const Dashboard: React.FC = () => {
                 >
                   <Typography
                     variant="subtitle2"
-                    color="primary.main"
                     fontWeight="bold"
                     sx={{
+                      color: "primary.main",
                       display: "flex",
                       alignItems: "center",
                       gap: 1,
@@ -672,9 +710,8 @@ export const Dashboard: React.FC = () => {
 
                     <Typography
                       variant="h3"
-                      color="text.primary"
                       fontWeight="900"
-                      sx={{ letterSpacing: "-1px" }}
+                      sx={{ color: "#ffffff", letterSpacing: "-1px" }}
                     >
                       {formatDuration(totalWatchedTime)}
                     </Typography>
@@ -682,9 +719,12 @@ export const Dashboard: React.FC = () => {
 
                   <Typography
                     variant="body2"
-                    color="text.secondary"
                     align="center"
-                    sx={{ mt: 2, fontWeight: 500 }}
+                    sx={{
+                      color: "rgba(255,255,255,0.8)",
+                      mt: 2,
+                      fontWeight: 500,
+                    }}
                   >
                     Total learning time
                   </Typography>
@@ -900,105 +940,102 @@ export const Dashboard: React.FC = () => {
                     }}
                   >
                     <List dense>
-                      {selectedChapter.videos.map(
-                        (video: any, vIdx: number) => {
-                          const videoProg = videosProgress?.[video.id];
-                          const isCompleted = videoProg?.completed;
-                          const percent = videoProg
-                            ? videoProg.duration > 0
-                              ? (videoProg.currentTime / videoProg.duration) *
-                                100
-                              : 0
-                            : 0;
+                      {selectedChapter.videos.map((video, vIdx: number) => {
+                        const videoProg = videosProgress?.[video.id];
+                        const isCompleted = videoProg?.completed;
+                        const percent = videoProg
+                          ? videoProg.duration > 0
+                            ? (videoProg.currentTime / videoProg.duration) * 100
+                            : 0
+                          : 0;
 
-                          return (
-                            <React.Fragment key={video.id}>
-                              <ListItem
+                        return (
+                          <React.Fragment key={video.id}>
+                            <ListItem
+                              sx={{
+                                py: 2,
+                                display: "block",
+                                cursor: "pointer",
+                                transition: "background-color 0.2s",
+                                "&:hover": {
+                                  bgcolor: "action.hover",
+                                },
+                              }}
+                              onClick={() =>
+                                navigate(
+                                  `/course?v=${encodeURIComponent(video.id)}`,
+                                )
+                              }
+                            >
+                              <Box
                                 sx={{
-                                  py: 2,
-                                  display: "block",
-                                  cursor: "pointer",
-                                  transition: "background-color 0.2s",
-                                  "&:hover": {
-                                    bgcolor: "action.hover",
-                                  },
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  mb: 1,
                                 }}
-                                onClick={() =>
-                                  navigate(
-                                    `/course?v=${encodeURIComponent(video.id)}`,
-                                  )
-                                }
                               >
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    mb: 1,
-                                  }}
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={isCompleted ? 600 : 400}
+                                  color={
+                                    isCompleted
+                                      ? "success.main"
+                                      : "text.primary"
+                                  }
                                 >
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={isCompleted ? 600 : 400}
-                                    color={
-                                      isCompleted
-                                        ? "success.main"
-                                        : "text.primary"
-                                    }
-                                  >
-                                    {vIdx + 1}. {video.title}
-                                  </Typography>
-                                  {isCompleted && (
-                                    <CheckCircleIcon
-                                      color="success"
-                                      sx={{ fontSize: 18 }}
-                                    />
-                                  )}
-                                </Box>
-                                {!isCompleted && percent > 0 && (
-                                  <Box sx={{ width: "100%", mt: 1 }}>
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        mb: 0.5,
-                                      }}
-                                    >
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        Progress
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        {Math.round(percent)}%
-                                      </Typography>
-                                    </Box>
-                                    <LinearProgress
-                                      variant="determinate"
-                                      value={percent}
-                                      sx={{
-                                        height: 4,
-                                        borderRadius: 2,
-                                        bgcolor: "action.hover",
-                                        "& .MuiLinearProgress-bar": {
-                                          borderRadius: 2,
-                                        },
-                                      }}
-                                    />
-                                  </Box>
+                                  {vIdx + 1}. {video.title}
+                                </Typography>
+                                {isCompleted && (
+                                  <CheckCircleIcon
+                                    color="success"
+                                    sx={{ fontSize: 18 }}
+                                  />
                                 )}
-                              </ListItem>
-                              {vIdx < selectedChapter.videos.length - 1 && (
-                                <Divider component="li" />
+                              </Box>
+                              {!isCompleted && percent > 0 && (
+                                <Box sx={{ width: "100%", mt: 1 }}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      mb: 0.5,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      Progress
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {Math.round(percent)}%
+                                    </Typography>
+                                  </Box>
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={percent}
+                                    sx={{
+                                      height: 4,
+                                      borderRadius: 2,
+                                      bgcolor: "action.hover",
+                                      "& .MuiLinearProgress-bar": {
+                                        borderRadius: 2,
+                                      },
+                                    }}
+                                  />
+                                </Box>
                               )}
-                            </React.Fragment>
-                          );
-                        },
-                      )}
+                            </ListItem>
+                            {vIdx < selectedChapter.videos.length - 1 && (
+                              <Divider component="li" />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                     </List>
                   </Box>
                 </>
