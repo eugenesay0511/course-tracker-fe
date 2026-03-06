@@ -60,6 +60,7 @@ const VideoListItem = React.memo(
 
     return (
       <ListItem
+        id={`video-list-item-${video.id}`}
         disablePadding
         secondaryAction={
           isCompleted ? (
@@ -171,17 +172,66 @@ export const CourseOutline: React.FC<CourseOutlineProps> = React.memo(
     onTogglePosition,
   }) => {
     const [expanded, setExpanded] = useState<string | false>(false);
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+      undefined,
+    );
+    const expandedRef = React.useRef(expanded);
+
+    React.useEffect(() => {
+      expandedRef.current = expanded;
+    }, [expanded]);
 
     // Auto-expand the chapter containing the active video whenever it changes
+    // and scroll the active video into view if it's off-screen
     React.useEffect(() => {
       if (activeVideoId) {
         const chapter = data.find((c) =>
           c.videos.some((v) => String(v.id) === String(activeVideoId)),
         );
         if (chapter) {
+          const needsAnimationWait = expandedRef.current !== chapter.id;
           setExpanded(chapter.id);
+
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+
+          const scrollToActive = () => {
+            const element = document.getElementById(
+              `video-list-item-${activeVideoId}`,
+            );
+            const container = scrollContainerRef.current;
+            if (element && container) {
+              const containerRect = container.getBoundingClientRect();
+              const elementRect = element.getBoundingClientRect();
+
+              const isVisible =
+                elementRect.top >= containerRect.top &&
+                elementRect.bottom <= containerRect.bottom;
+
+              if (!isVisible) {
+                const targetScrollTop =
+                  container.scrollTop +
+                  (elementRect.top - containerRect.top) -
+                  containerRect.height * 0.2;
+                container.scrollTo({
+                  top: Math.max(0, targetScrollTop),
+                  behavior: "smooth",
+                });
+              }
+            }
+          };
+
+          timeoutRef.current = setTimeout(
+            scrollToActive,
+            needsAnimationWait ? 350 : 50,
+          );
         }
       }
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      };
     }, [activeVideoId, data]);
 
     const handleChange =
@@ -192,6 +242,7 @@ export const CourseOutline: React.FC<CourseOutlineProps> = React.memo(
 
     return (
       <Box
+        ref={scrollContainerRef}
         sx={(theme) => ({
           width: "100%",
           height: "100%",
