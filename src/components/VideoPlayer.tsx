@@ -5,13 +5,13 @@ import {
   NavigateBefore as PrevIcon,
   FolderOpen as ChapterIcon,
   Info as InfoIcon,
-  Close as CloseIcon,
-  Keyboard as KeyboardIcon,
   Replay as RestartIcon,
 } from "@mui/icons-material";
-import { Modal, Backdrop, Fade, Paper, Divider } from "@mui/material";
+import { Divider } from "@mui/material";
 import type { VideoProgress, Bookmark } from "../types";
 import { BookmarksPanel, type BookmarksPanelHandle } from "./BookmarksPanel";
+import { useVideoShortcuts } from "../hooks/useVideoShortcuts";
+import { VideoShortcutsModal } from "./video/VideoShortcutsModal";
 
 // Vidstack Core Imports
 import "@vidstack/react/player/styles/default/theme.css";
@@ -77,7 +77,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const playerRef = useRef<MediaPlayerInstance>(null);
   const bookmarksRef = useRef<BookmarksPanelHandle>(null);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
-  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const { showShortcuts, setShowShortcuts, handleKeyDown } = useVideoShortcuts({
+    playerRef,
+    bookmarksRef,
+    playbackSpeed,
+    onChangePlaybackSpeed,
+    onNext,
+    onPrevious,
+    hasNext,
+    hasPrevious,
+  });
 
   const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
@@ -223,135 +233,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onNext();
     }
   }, [autoplay, onNext]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    const player = playerRef.current;
-    if (!player) return;
-    if (
-      [" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
-    ) {
-      e.preventDefault();
-    }
-
-    const key = e.key.toLowerCase();
-
-    switch (key) {
-      case " ":
-      case "k":
-        if (player.state.paused) player.play();
-        else player.pause();
-        break;
-      case "f":
-        if (!player.state.fullscreen) {
-          player.enterFullscreen().catch((err) => {
-            console.error(`Fullscreen error: ${err.message}`);
-          });
-        } else {
-          player.exitFullscreen();
-        }
-        break;
-      case "m":
-        player.muted = !player.state.muted;
-        break;
-      case "b":
-        e.preventDefault();
-        bookmarksRef.current?.triggerOpen();
-        break;
-      case "arrowright":
-      case "l":
-        player.currentTime = Math.min(
-          player.state.duration,
-          player.state.currentTime + 5,
-        );
-        break;
-      case "arrowleft":
-      case "j":
-        player.currentTime = Math.max(0, player.state.currentTime - 5);
-        break;
-      case "arrowup":
-        player.volume = Math.min(1, player.state.volume + 0.1);
-        break;
-      case "arrowdown":
-        player.volume = Math.max(0, player.state.volume - 0.1);
-        break;
-      case ",":
-      case "<":
-        if (onPrevious && hasPrevious) onPrevious();
-        break;
-      case ".":
-      case ">":
-        if (onNext && hasNext) onNext();
-        break;
-      case "c":
-        if (player.textTracks) {
-          const tracks = Array.from(player.textTracks);
-          for (const track of tracks) {
-            if (track && track.kind === "subtitles") {
-              track.mode = track.mode === "showing" ? "hidden" : "showing";
-            }
-          }
-        }
-        break;
-      case "?":
-      case "/":
-        setShowShortcuts((prev) => !prev);
-        break;
-      case "+":
-      case "=": {
-        const nextSpeed = Math.min(
-          3,
-          Math.round((playbackSpeed + 0.25) * 100) / 100,
-        );
-        onChangePlaybackSpeed?.(nextSpeed);
-        const p = playerRef.current;
-        if (p) p.playbackRate = nextSpeed;
-        break;
-      }
-      case "-": {
-        const nextSpeed = Math.max(
-          0.25,
-          Math.round((playbackSpeed - 0.25) * 100) / 100,
-        );
-        onChangePlaybackSpeed?.(nextSpeed);
-        const p = playerRef.current;
-        if (p) p.playbackRate = nextSpeed;
-        break;
-      }
-    }
-  };
-
-  const ShortcutRow = ({ keys, label }: { keys: string[]; label: string }) => (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        py: 1,
-      }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Box sx={{ display: "flex", gap: 0.5 }}>
-        {keys.map((k) => (
-          <Paper
-            key={k}
-            sx={{
-              px: 1,
-              py: 0.3,
-              fontSize: "0.75rem",
-              fontWeight: "bold",
-              bgcolor: "action.hover",
-              border: 1,
-              borderColor: "divider",
-            }}
-          >
-            {k}
-          </Paper>
-        ))}
-      </Box>
-    </Box>
-  );
 
   return (
     <Box
@@ -666,105 +547,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       </Stack>
 
       {/* Shortcuts Info Modal */}
-      {showShortcuts && (
-        <Modal
-          open={showShortcuts}
-          onClose={() => setShowShortcuts(false)}
-          closeAfterTransition
-          slots={{ backdrop: Backdrop }}
-          slotProps={{
-            backdrop: {
-              timeout: 500,
-              sx: (theme) => ({
-                backdropFilter: "blur(4px)",
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(0,0,0,0.8)"
-                    : "rgba(255,255,255,0.8)",
-              }),
-            },
-          }}
-        >
-          <Fade in={showShortcuts}>
-            <Paper
-              onKeyDown={(e) => {
-                if (e.key === "/" || e.key === "?") {
-                  setShowShortcuts(false);
-                }
-              }}
-              sx={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: 400,
-                bgcolor: "background.paper",
-                border: 1,
-                borderColor: "divider",
-                boxShadow: 24,
-                p: 4,
-                borderRadius: 4,
-                outline: "none",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  mb: 2,
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <KeyboardIcon color="primary" />
-                  <Typography variant="h6" fontWeight="bold">
-                    Keyboard Shortcuts
-                  </Typography>
-                </Box>
-                <IconButton
-                  size="small"
-                  onClick={() => setShowShortcuts(false)}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Box>
-
-              <Divider sx={{ mb: 2, opacity: 0.1 }} />
-
-              <Stack spacing={0.5}>
-                <ShortcutRow label="Play / Pause" keys={["Space", "K"]} />
-                <ShortcutRow label="Full Screen" keys={["F"]} />
-                <ShortcutRow label="Mute / Unmute" keys={["M"]} />
-                <ShortcutRow label="Add Bookmark" keys={["B"]} />
-                <ShortcutRow label="Seek Forward 5s" keys={["→", "L"]} />
-                <ShortcutRow label="Seek Backward 5s" keys={["←", "J"]} />
-                <ShortcutRow label="Increase Volume" keys={["↑"]} />
-                <ShortcutRow label="Decrease Volume" keys={["↓"]} />
-                <ShortcutRow label="Next Video" keys={[".", ">"]} />
-                <ShortcutRow label="Previous Video" keys={[",", "<"]} />
-                <ShortcutRow label="Toggle Subtitles" keys={["C"]} />
-                <ShortcutRow label="Speed Up" keys={["+"]} />
-                <ShortcutRow label="Speed Down" keys={["-"]} />
-                <ShortcutRow label="Show Shortcuts" keys={["?", "/"]} />
-              </Stack>
-
-              <Box
-                sx={{
-                  mt: 3,
-                  pt: 2,
-                  borderTop: 1,
-                  borderColor: "divider",
-                  textAlign: "center",
-                }}
-              >
-                <Typography variant="caption" color="text.secondary">
-                  Focus the video player to use these shortcuts
-                </Typography>
-              </Box>
-            </Paper>
-          </Fade>
-        </Modal>
-      )}
+      <VideoShortcutsModal
+        open={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </Box>
   );
 };
