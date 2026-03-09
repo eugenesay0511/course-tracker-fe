@@ -22,6 +22,7 @@ import {
   BookmarkAdd as BookmarkAddIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
+import { ShortcutTooltip, shortcutTooltipProps } from "./video/ShortcutTooltip";
 import type { Bookmark } from "../types";
 import { formatTime } from "../utils/formatters";
 
@@ -90,7 +91,10 @@ export const BookmarksPanel = forwardRef<
 
     return (
       <>
-        <Tooltip title="Add Bookmark">
+        <Tooltip
+          title={<ShortcutTooltip label="Add Bookmark" shortcut="B" />}
+          {...shortcutTooltipProps}
+        >
           <IconButton
             ref={buttonRef}
             onClick={(e) => {

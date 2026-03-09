@@ -1,0 +1,8 @@
+﻿src/pages/Bookmarks.tsx(134,27): error TS6133: 'event' is declared but its value is never read.
+src/pages/Bookmarks.tsx(617,29): error TS2322: Type 'RefObject<HTMLInputElement | null>' is not assignable to type 'RefObject<HTMLInputElement>'.
+  Type 'HTMLInputElement | null' is not assignable to type 'HTMLInputElement'.
+    Type 'null' is not assignable to type 'HTMLInputElement'.
+src/pages/Bookmarks.tsx(663,25): error TS2322: Type 'RefObject<HTMLInputElement | null>' is not assignable to type 'RefObject<HTMLInputElement>'.
+  Type 'HTMLInputElement | null' is not assignable to type 'HTMLInputElement'.
+    Type 'null' is not assignable to type 'HTMLInputElement'.
+src/pages/Bookmarks.tsx(772,38): error TS2304: Cannot find name 'handleSaveEdit'.

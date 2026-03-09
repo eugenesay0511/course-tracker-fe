@@ -84,7 +84,10 @@ export const TimeWatchedCard: React.FC<TimeWatchedCardProps> = ({
           <Typography
             variant="h3"
             fontWeight="900"
-            sx={{ color: "#ffffff", letterSpacing: "-1px" }}
+            sx={{
+              color: "text.primary",
+              letterSpacing: "-1px",
+            }}
           >
             {formatDuration(totalWatchedTime)}
           </Typography>
@@ -94,7 +97,7 @@ export const TimeWatchedCard: React.FC<TimeWatchedCardProps> = ({
           variant="body2"
           align="center"
           sx={{
-            color: "rgba(255,255,255,0.8)",
+            color: "text.secondary",
             mt: 2,
             fontWeight: 500,
           }}

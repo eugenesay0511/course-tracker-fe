@@ -108,7 +108,7 @@ export const OverallProgressCard: React.FC<OverallProgressCardProps> = ({
           variant="body2"
           align="center"
           sx={{
-            color: "rgba(255,255,255,0.7)",
+            color: "text.secondary",
             mt: 2,
             fontWeight: 500,
           }}

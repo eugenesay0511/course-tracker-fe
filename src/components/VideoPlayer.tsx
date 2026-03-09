@@ -12,6 +12,7 @@ import type { VideoProgress, Bookmark } from "../types";
 import { BookmarksPanel, type BookmarksPanelHandle } from "./BookmarksPanel";
 import { useVideoShortcuts } from "../hooks/useVideoShortcuts";
 import { VideoShortcutsModal } from "./video/VideoShortcutsModal";
+import { ShortcutTooltip, shortcutTooltipProps } from "./video/ShortcutTooltip";
 
 // Vidstack Core Imports
 import "@vidstack/react/player/styles/default/theme.css";
@@ -87,6 +88,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     onPrevious,
     hasNext,
     hasPrevious,
+    autoplay,
+    onToggleAutoplay,
   });
 
   const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -363,7 +366,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             />
           )}
           {/* Autoplay */}
-          <Tooltip title={autoplay ? "Autoplay is on" : "Autoplay is off"}>
+          <Tooltip
+            title={
+              <ShortcutTooltip
+                label={autoplay ? "Autoplay ON" : "Autoplay OFF"}
+                shortcut="A"
+              />
+            }
+            {...shortcutTooltipProps}
+          >
             <Box
               onClick={() => onToggleAutoplay?.(!autoplay)}
               sx={{
@@ -424,7 +435,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </Box>
           </Tooltip>
           {/* Speed */}
-          <Tooltip title={`Playback Speed: ${playbackSpeed}x`}>
+          <Tooltip
+            title={<ShortcutTooltip label="Playback Speed" shortcut="+/-" />}
+            {...shortcutTooltipProps}
+          >
             <IconButton
               onClick={() => {
                 const idx = SPEED_OPTIONS.indexOf(playbackSpeed);
@@ -463,7 +477,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </Tooltip>
 
           {/* Restart */}
-          <Tooltip title="Restart Video">
+          <Tooltip
+            title={<ShortcutTooltip label="Restart Video" shortcut="0" />}
+            {...shortcutTooltipProps}
+          >
             <IconButton
               size="small"
               onClick={() => {
@@ -485,7 +502,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </IconButton>
           </Tooltip>
           {/* Previous */}
-          <Tooltip title="Previous Video">
+          <Tooltip
+            title={<ShortcutTooltip label="Previous Video" shortcut="<" />}
+            {...shortcutTooltipProps}
+          >
             <span>
               <IconButton
                 size="small"
@@ -506,7 +526,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </span>
           </Tooltip>
           {/* Next */}
-          <Tooltip title="Next Video">
+          <Tooltip
+            title={<ShortcutTooltip label="Next Video" shortcut=">" />}
+            {...shortcutTooltipProps}
+          >
             <span>
               <IconButton
                 size="small"
@@ -527,7 +550,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </span>
           </Tooltip>
           {/* Shortcuts */}
-          <Tooltip title="View Keyboard Shortcuts">
+          <Tooltip
+            title={<ShortcutTooltip label="Keyboard Shortcuts" shortcut="?" />}
+            {...shortcutTooltipProps}
+          >
             <IconButton
               size="small"
               onClick={() => setShowShortcuts(true)}

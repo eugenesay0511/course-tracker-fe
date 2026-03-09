@@ -11,6 +11,8 @@ interface UseVideoShortcutsParams {
   onPrevious?: () => void;
   hasNext?: boolean;
   hasPrevious?: boolean;
+  autoplay?: boolean;
+  onToggleAutoplay?: (enabled: boolean) => void;
 }
 
 export const useVideoShortcuts = ({
@@ -22,6 +24,8 @@ export const useVideoShortcuts = ({
   onPrevious,
   hasNext,
   hasPrevious,
+  autoplay,
+  onToggleAutoplay,
 }: UseVideoShortcutsParams) => {
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -118,6 +122,13 @@ export const useVideoShortcuts = ({
         if (p) p.playbackRate = nextSpeed;
         break;
       }
+      case "a":
+        onToggleAutoplay?.(!autoplay);
+        break;
+      case "0":
+        player.currentTime = 0;
+        player.play();
+        break;
     }
   };
 

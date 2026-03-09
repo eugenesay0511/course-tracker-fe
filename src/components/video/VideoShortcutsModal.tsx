@@ -169,6 +169,8 @@ export const VideoShortcutsModal: React.FC<VideoShortcutsModalProps> = ({
           <Box sx={{ p: 2, overflowY: "auto", flexGrow: 1 }}>
             <Stack spacing={0.5}>
               <ShortcutRow label="Play / Pause" keys={["Space", "K"]} />
+              <ShortcutRow label="Restart Video" keys={["0"]} />
+              <ShortcutRow label="Toggle Autoplay" keys={["A"]} />
               <ShortcutRow label="Full Screen" keys={["F"]} />
               <ShortcutRow label="Mute / Unmute" keys={["M"]} />
               <ShortcutRow label="Add Bookmark" keys={["B"]} />

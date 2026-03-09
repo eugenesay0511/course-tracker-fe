@@ -171,6 +171,7 @@ function SettingsButton() {
   );
 }
 function AppContent() {
+  const navigate = useNavigate();
   const isStoreLoaded = useAtomValue(isStoreLoadedAtom);
   const courseData = useAtomValue(courseDataStateAtom);
   const hasData = courseData && courseData.length > 0;
@@ -212,7 +213,15 @@ function AppContent() {
     >
       <AppBar position="static" elevation={1}>
         <Toolbar sx={{ justifyContent: "center" }}>
-          <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              flex: 1,
+              cursor: "pointer",
+            }}
+            onClick={() => navigate("/")}
+          >
             <Box
               component="img"
               src="/brain.svg"
