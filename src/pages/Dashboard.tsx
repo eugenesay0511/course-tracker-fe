@@ -424,7 +424,13 @@ export const Dashboard: React.FC = () => {
           slotProps={{
             backdrop: {
               timeout: 500,
-              sx: { backdropFilter: "blur(4px)", bgcolor: "rgba(0,0,0,0.6)" },
+              sx: (theme) => ({
+                backdropFilter: "blur(8px)",
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(0,0,0,0.8)"
+                    : "rgba(255,255,255,0.7)",
+              }),
             },
           }}
         >
@@ -435,15 +441,27 @@ export const Dashboard: React.FC = () => {
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
-                width: { xs: "90%", sm: 500 },
-                maxHeight: "80vh",
-                bgcolor: "background.paper",
-                borderRadius: 4,
-                boxShadow: 24,
-                p: 0,
+                width: { xs: "95%", sm: 550 },
+                maxHeight: "85vh",
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(30, 41, 59, 0.95)"
+                    : "#ffffff",
+                backdropFilter: "blur(20px)",
+                borderRadius: 5,
+                boxShadow: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
+                    : "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
+                border: "1px solid",
+                borderColor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.05)",
+                outline: "none",
               }}
             >
               {selectedChapter && (
@@ -454,24 +472,42 @@ export const Dashboard: React.FC = () => {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      bgcolor: "primary.main",
-                      color: "primary.contrastText",
+                      borderBottom: "1px solid",
+                      borderColor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(0,0,0,0.05)",
                     }}
                   >
                     <Box>
-                      <Typography variant="h6" fontWeight="bold">
+                      <Typography
+                        variant="h6"
+                        fontWeight="900"
+                        sx={{ letterSpacing: "-0.5px" }}
+                      >
                         {selectedChapter.title}
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "primary.main",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: 1,
+                        }}
+                      >
                         {selectedChapter.completed} / {selectedChapter.total}{" "}
-                        videos completed
+                        Lessons Completed
                       </Typography>
                     </Box>
                     <IconButton
                       onClick={() => setSelectedChapter(null)}
-                      sx={{ color: "inherit" }}
+                      sx={{
+                        bgcolor: "action.hover",
+                        "&:hover": { bgcolor: "action.selected" },
+                      }}
                     >
-                      <CloseIcon />
+                      <CloseIcon fontSize="small" />
                     </IconButton>
                   </Box>
 
@@ -480,23 +516,21 @@ export const Dashboard: React.FC = () => {
                       p: 2,
                       overflowY: "auto",
                       "&::-webkit-scrollbar": {
-                        width: "8px",
+                        width: "6px",
                       },
                       "&::-webkit-scrollbar-track": {
                         backgroundColor: "transparent",
                       },
                       "&::-webkit-scrollbar-thumb": {
-                        backgroundColor: "action.hover",
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.1)",
                         borderRadius: "10px",
-                        border: "2px solid transparent",
-                        backgroundClip: "content-box",
-                      },
-                      "&::-webkit-scrollbar-thumb:hover": {
-                        backgroundColor: "action.selected",
                       },
                     }}
                   >
-                    <List dense>
+                    <List disablePadding>
                       {selectedChapter.videos.map((video, vIdx: number) => {
                         const videoProg = videosProgress?.[video.id];
                         const isCompleted = videoProg?.completed;
@@ -511,11 +545,20 @@ export const Dashboard: React.FC = () => {
                             <ListItem
                               sx={{
                                 py: 2,
+                                px: 2,
                                 display: "block",
                                 cursor: "pointer",
-                                transition: "background-color 0.2s",
+                                borderRadius: 3,
+                                mb: 1,
+                                transition: "all 0.2s ease",
+                                border: "1px solid transparent",
                                 "&:hover": {
-                                  bgcolor: "action.hover",
+                                  bgcolor: (theme) =>
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(255,255,255,0.03)"
+                                      : "rgba(0,0,0,0.02)",
+                                  borderColor: "divider",
+                                  transform: "translateX(4px)",
                                 },
                               }}
                               onClick={() =>
@@ -529,45 +572,88 @@ export const Dashboard: React.FC = () => {
                                   display: "flex",
                                   justifyContent: "space-between",
                                   alignItems: "center",
-                                  mb: 1,
+                                  gap: 2,
                                 }}
                               >
                                 <Typography
                                   variant="body2"
-                                  fontWeight={isCompleted ? 600 : 400}
-                                  color={
-                                    isCompleted
+                                  fontWeight={isCompleted ? 800 : 600}
+                                  sx={{
+                                    color: isCompleted
                                       ? "success.main"
-                                      : "text.primary"
-                                  }
+                                      : "text.primary",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1.5,
+                                  }}
                                 >
-                                  {vIdx + 1}. {video.title}
+                                  <Box
+                                    component="span"
+                                    sx={{
+                                      minWidth: 24,
+                                      height: 24,
+                                      borderRadius: "50%",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: "0.7rem",
+                                      bgcolor: isCompleted
+                                        ? "success.main"
+                                        : "action.hover",
+                                      color: isCompleted
+                                        ? "white"
+                                        : "text.secondary",
+                                    }}
+                                  >
+                                    {isCompleted ? (
+                                      <CheckCircleIcon sx={{ fontSize: 14 }} />
+                                    ) : (
+                                      vIdx + 1
+                                    )}
+                                  </Box>
+                                  {video.title}
                                 </Typography>
                                 {isCompleted && (
-                                  <CheckCircleIcon
-                                    color="success"
-                                    sx={{ fontSize: 18 }}
-                                  />
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      color: "success.main",
+                                      fontWeight: 800,
+                                      bgcolor: "rgba(34, 197, 94, 0.1)",
+                                      px: 1,
+                                      py: 0.5,
+                                      borderRadius: 1,
+                                    }}
+                                  >
+                                    DONE
+                                  </Typography>
                                 )}
                               </Box>
+
                               {!isCompleted && percent > 0 && (
-                                <Box sx={{ width: "100%", mt: 1 }}>
+                                <Box sx={{ width: "100%", mt: 2, pl: 5 }}>
                                   <Box
                                     sx={{
                                       display: "flex",
                                       justifyContent: "space-between",
-                                      mb: 0.5,
+                                      mb: 0.8,
                                     }}
                                   >
                                     <Typography
                                       variant="caption"
-                                      color="text.secondary"
+                                      sx={{
+                                        fontWeight: 700,
+                                        color: "text.secondary",
+                                      }}
                                     >
-                                      Progress
+                                      IN PROGRESS
                                     </Typography>
                                     <Typography
                                       variant="caption"
-                                      color="text.secondary"
+                                      sx={{
+                                        fontWeight: 800,
+                                        color: "primary.main",
+                                      }}
                                     >
                                       {Math.round(percent)}%
                                     </Typography>
@@ -576,20 +662,19 @@ export const Dashboard: React.FC = () => {
                                     variant="determinate"
                                     value={percent}
                                     sx={{
-                                      height: 4,
-                                      borderRadius: 2,
+                                      height: 6,
+                                      borderRadius: 3,
                                       bgcolor: "action.hover",
                                       "& .MuiLinearProgress-bar": {
-                                        borderRadius: 2,
+                                        borderRadius: 3,
+                                        background: (theme) =>
+                                          `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
                                       },
                                     }}
                                   />
                                 </Box>
                               )}
                             </ListItem>
-                            {vIdx < selectedChapter.videos.length - 1 && (
-                              <Divider component="li" />
-                            )}
                           </React.Fragment>
                         );
                       })}

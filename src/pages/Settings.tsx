@@ -128,14 +128,34 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
       maxWidth="sm"
       fullWidth
       slotProps={{
+        backdrop: {
+          sx: {
+            backdropFilter: "blur(8px)",
+            bgcolor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(0,0,0,0.7)"
+                : "rgba(255,255,255,0.5)",
+          },
+        },
         paper: {
           sx: {
-            borderRadius: 4,
+            borderRadius: 5,
+            bgcolor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(30, 41, 59, 0.95)"
+                : "#ffffff",
+            backdropFilter: "blur(20px)",
+            border: "1px solid",
+            borderColor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.05)",
             boxShadow: (theme: Theme) =>
               theme.palette.mode === "dark"
-                ? "0 24px 48px rgba(0,0,0,0.6)"
-                : "0 24px 48px rgba(0,0,0,0.1)",
+                ? "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
+                : "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
             backgroundImage: "none",
+            overflow: "hidden",
           },
         },
       }}
@@ -146,39 +166,58 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
           p: 3,
           display: "flex",
           alignItems: "center",
-          gap: 1.5,
-          borderBottom: 1,
-          borderColor: "divider",
+          gap: 2,
+          borderBottom: "1px solid",
+          borderColor: (theme) =>
+            theme.palette.mode === "dark"
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(0,0,0,0.05)",
         }}
       >
         <Box
           sx={{
             display: "flex",
-            p: 1,
-            borderRadius: 2,
+            p: 1.25,
+            borderRadius: 2.5,
             bgcolor: "primary.main",
             color: "primary.contrastText",
+            boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
           }}
         >
-          <SettingsIcon fontSize="small" />
+          <SettingsIcon sx={{ fontSize: 20 }} />
         </Box>
-        <Typography variant="h6" fontWeight="bold" component="span">
-          Preferences
-        </Typography>
+        <Box>
+          <Typography
+            variant="h6"
+            fontWeight="900"
+            sx={{ letterSpacing: "-0.5px", lineHeight: 1.2 }}
+          >
+            Preferences
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary", fontWeight: 600 }}
+          >
+            System configuration & user settings
+          </Typography>
+        </Box>
         <IconButton
           aria-label="close"
           onClick={onClose}
           sx={{
             position: "absolute",
-            right: 16,
-            top: 20,
-            color: (theme: Theme) => theme.palette.text.secondary,
+            right: 20,
+            top: 24,
+            color: "text.secondary",
+            bgcolor: "action.hover",
             "&:hover": {
-              bgcolor: "action.hover",
+              bgcolor: "action.selected",
+              color: "text.primary",
             },
+            transition: "all 0.2s",
           }}
         >
-          <CloseIcon />
+          <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
 

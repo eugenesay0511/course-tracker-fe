@@ -11,7 +11,6 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
-  Divider,
   Modal,
   Fade,
   Backdrop,
@@ -183,24 +182,45 @@ export const SearchBar: React.FC = () => {
         slotProps={{
           backdrop: {
             timeout: 200,
-            sx: { backdropFilter: "blur(4px)", bgcolor: "rgba(0,0,0,0.5)" },
+            sx: (theme) => ({
+              backdropFilter: "blur(8px)",
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(0,0,0,0.8)"
+                  : "rgba(255,255,255,0.7)",
+            }),
           },
         }}
       >
         <Fade in={open}>
           <Paper
+            elevation={0}
             sx={{
               position: "absolute",
               top: "15%",
               left: "50%",
               transform: "translateX(-50%)",
-              width: { xs: "90%", sm: 560 },
-              maxHeight: "60vh",
-              borderRadius: 3,
+              width: { xs: "95%", sm: 600 },
+              maxHeight: "70vh",
+              borderRadius: 5,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(30, 41, 59, 0.95)"
+                  : "#ffffff",
+              backdropFilter: "blur(20px)",
+              border: "1px solid",
+              borderColor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.1)"
+                  : "rgba(0,0,0,0.05)",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
+                  : "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+              outline: "none",
             }}
           >
             {/* Search input */}
@@ -208,13 +228,20 @@ export const SearchBar: React.FC = () => {
               sx={{
                 display: "flex",
                 alignItems: "center",
-                px: 2,
-                py: 1,
-                borderBottom: 1,
-                borderColor: "divider",
+                px: 3,
+                py: 2.5,
+                borderBottom: "1px solid",
+                borderColor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.08)"
+                    : "rgba(0,0,0,0.05)",
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.02)"
+                    : "rgba(0,0,0,0.01)",
               }}
             >
-              <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+              <SearchIcon sx={{ mr: 2, color: "primary.main", fontSize: 24 }} />
               <InputBase
                 inputRef={inputRef}
                 fullWidth
@@ -222,8 +249,9 @@ export const SearchBar: React.FC = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 sx={{
-                  fontSize: "1rem",
-                  "& input": { py: 1 },
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  "& input": { py: 0 },
                 }}
               />
               <Chip
@@ -231,10 +259,15 @@ export const SearchBar: React.FC = () => {
                 size="small"
                 variant="outlined"
                 sx={{
-                  ml: 1,
+                  ml: 2,
                   height: 24,
                   fontSize: "0.65rem",
+                  fontWeight: 900,
+                  borderRadius: 1.5,
                   cursor: "pointer",
+                  bgcolor: "action.hover",
+                  border: "1px solid",
+                  borderColor: "divider",
                 }}
                 onClick={() => setOpen(false)}
               />
@@ -244,74 +277,133 @@ export const SearchBar: React.FC = () => {
             <Box
               sx={{
                 overflowY: "auto",
-                maxHeight: "calc(60vh - 56px)",
+                px: 1,
+                py: 1,
                 "&::-webkit-scrollbar": { width: "6px" },
                 "&::-webkit-scrollbar-thumb": {
-                  backgroundColor: "action.hover",
-                  borderRadius: "6px",
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(0,0,0,0.1)",
+                  borderRadius: "10px",
                 },
               }}
             >
               {query.trim() && results.length === 0 && (
-                <Box sx={{ py: 6, textAlign: "center" }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box sx={{ py: 8, textAlign: "center" }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ color: "text.secondary", fontWeight: 600 }}
+                  >
                     No results for "{query}"
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.disabled", display: "block", mt: 1 }}
+                  >
+                    Try searching for different keywords
                   </Typography>
                 </Box>
               )}
 
               {!query.trim() && (
-                <Box sx={{ py: 6, textAlign: "center" }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Start typing to search...
+                <Box sx={{ py: 8, textAlign: "center" }}>
+                  <SearchIcon
+                    sx={{
+                      fontSize: 48,
+                      color: "action.disabled",
+                      mb: 2,
+                      opacity: 0.2,
+                    }}
+                  />
+                  <Typography
+                    variant="body1"
+                    sx={{ color: "text.secondary", fontWeight: 600 }}
+                  >
+                    Find anything instantly
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.disabled", display: "block", mt: 0.5 }}
+                  >
+                    Search across videos, chapters, and your own bookmarks.
                   </Typography>
                 </Box>
               )}
 
               {results.length > 0 && (
                 <List dense disablePadding>
-                  {results.map((r, idx) => (
-                    <React.Fragment key={r.id}>
-                      <ListItem
-                        sx={{
-                          px: 2,
-                          py: 1.5,
-                          cursor: "pointer",
-                          "&:hover": { bgcolor: "action.hover" },
-                          transition: "background-color 0.15s",
-                        }}
-                        onClick={() => handleSelect(r)}
-                      >
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          {getIcon(r.type)}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={r.title}
-                          secondary={r.subtitle}
-                          primaryTypographyProps={{
-                            fontWeight: 600,
-                            noWrap: true,
-                            variant: "body2",
-                          }}
-                          secondaryTypographyProps={{
-                            variant: "caption",
-                            noWrap: true,
-                          }}
-                        />
-                        <Chip
-                          label={getChipLabel(r.type)}
-                          size="small"
-                          variant="outlined"
+                  {results.map((r) => (
+                    <ListItem
+                      key={r.id}
+                      sx={{
+                        px: 2,
+                        py: 2,
+                        mb: 0.5,
+                        cursor: "pointer",
+                        borderRadius: 3,
+                        transition: "all 0.2s ease",
+                        border: "1px solid transparent",
+                        "&:hover": {
+                          bgcolor: "action.hover",
+                          borderColor: "divider",
+                          transform: "translateX(4px)",
+                        },
+                      }}
+                      onClick={() => handleSelect(r)}
+                    >
+                      <ListItemIcon sx={{ minWidth: 48 }}>
+                        <Box
                           sx={{
-                            ml: 1,
-                            height: 22,
-                            fontSize: "0.65rem",
-                            fontWeight: 600,
+                            width: 36,
+                            height: 36,
+                            borderRadius: 2,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            bgcolor: (theme) =>
+                              theme.palette.mode === "dark"
+                                ? "rgba(255,255,255,0.05)"
+                                : "rgba(0,0,0,0.03)",
                           }}
-                        />
-                      </ListItem>
-                      {idx < results.length - 1 && <Divider />}
-                    </React.Fragment>
+                        >
+                          {getIcon(r.type)}
+                        </Box>
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={r.title}
+                        secondary={r.subtitle}
+                        primaryTypographyProps={{
+                          fontWeight: 700,
+                          noWrap: true,
+                          variant: "body1",
+                          sx: { color: "text.primary" },
+                        }}
+                        secondaryTypographyProps={{
+                          variant: "caption",
+                          noWrap: true,
+                          sx: { fontWeight: 600, color: "text.secondary" },
+                        }}
+                      />
+                      <Chip
+                        label={getChipLabel(r.type).toUpperCase()}
+                        size="small"
+                        sx={{
+                          ml: 2,
+                          height: 20,
+                          fontSize: "0.6rem",
+                          fontWeight: 900,
+                          letterSpacing: 0.5,
+                          borderRadius: 1,
+                          bgcolor: (theme) =>
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.05)"
+                              : "rgba(0,0,0,0.05)",
+                          color: "text.secondary",
+                          border: "none",
+                        }}
+                      />
+                    </ListItem>
                   ))}
                 </List>
               )}
