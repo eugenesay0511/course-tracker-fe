@@ -5,6 +5,7 @@ import {
   Typography,
   Box,
   LinearProgress,
+  Tooltip,
 } from "@mui/material";
 import {
   LocalFireDepartment as FireIcon,
@@ -247,42 +248,50 @@ export const StudyStreakCard: React.FC = () => {
                     ? Math.max(4, (day.seconds / maxSecondsInWeek) * 40)
                     : 4;
                 return (
-                  <Box
+                  <Tooltip
                     key={day.key}
-                    sx={{
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 0.5,
-                    }}
+                    title={formatDuration(day.seconds)}
+                    arrow
+                    placement="top"
                   >
                     <Box
                       sx={{
-                        width: "100%",
-                        height: `${height}px`,
-                        borderRadius: 1,
-                        bgcolor: day.met
-                          ? "#10b981"
-                          : day.seconds > 0
-                            ? "primary.main"
-                            : "action.hover",
-                        transition: "height 0.3s ease",
-                        opacity: day.met ? 1 : 0.6,
-                      }}
-                    />
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontSize: "0.6rem",
-                        color:
-                          day.key === today ? "primary.main" : "text.disabled",
-                        fontWeight: day.key === today ? 800 : 500,
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 0.5,
                       }}
                     >
-                      {day.label}
-                    </Typography>
-                  </Box>
+                      <Box
+                        sx={{
+                          width: "100%",
+                          height: `${height}px`,
+                          borderRadius: 1,
+                          bgcolor: day.met
+                            ? "#10b981"
+                            : day.seconds > 0
+                              ? "primary.main"
+                              : "action.hover",
+                          transition: "height 0.3s ease",
+                          opacity: day.met ? 1 : 0.6,
+                        }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: "0.6rem",
+                          color:
+                            day.key === today
+                              ? "primary.main"
+                              : "text.disabled",
+                          fontWeight: day.key === today ? 800 : 500,
+                        }}
+                      >
+                        {day.label}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
                 );
               })}
             </Box>
