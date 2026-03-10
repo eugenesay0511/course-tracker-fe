@@ -5,14 +5,12 @@ import { CheckCircle as CheckCircleIcon } from "@mui/icons-material";
 
 interface OverallProgressCardProps {
   completedVideos: number;
-  inProgressVideos: number;
   remainingVideos: number;
   totalVideos: number;
 }
 
 export const OverallProgressCard: React.FC<OverallProgressCardProps> = ({
   completedVideos,
-  inProgressVideos,
   remainingVideos,
   totalVideos,
 }) => {
@@ -80,12 +78,6 @@ export const OverallProgressCard: React.FC<OverallProgressCardProps> = ({
                     color: "#10b981",
                   },
                   {
-                    id: 1,
-                    value: inProgressVideos,
-                    label: "In Progress",
-                    color: "#3b82f6",
-                  },
-                  {
                     id: 2,
                     value: remainingVideos,
                     label: "Remaining",
@@ -96,12 +88,26 @@ export const OverallProgressCard: React.FC<OverallProgressCardProps> = ({
                 outerRadius: 80,
                 paddingAngle: 2,
                 cornerRadius: 6,
-                cx: 150,
+                cx: 140,
               },
             ]}
-            width={300}
+            width={340}
             height={180}
-            margin={{ right: 5 }}
+            margin={{ right: 80 }}
+            slotProps={{
+              legend: {
+                direction: "vertical",
+                position: { vertical: "middle", horizontal: "end" },
+                sx: {
+                  fontSize: 12,
+                  fontWeight: 600,
+                  "& .MuiChartsLegend-mark": {
+                    width: 10,
+                    height: 10,
+                  },
+                },
+              },
+            }}
           />
         </Box>
         <Typography

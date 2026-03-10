@@ -43,7 +43,6 @@ import { useSetAtom } from "jotai";
 export type ChapterStat = Chapter & {
   total: number;
   completed: number;
-  inProgress: number;
   watchedTime: number;
   totalTime: number;
 };
@@ -80,14 +79,12 @@ export const Dashboard: React.FC = () => {
   const stats = useMemo(() => {
     let totalVideos = 0;
     let completedVideos = 0;
-    let inProgressVideos = 0;
     let totalWatchedTime = 0;
     let totalTime = 0;
 
     const chapterStats: ChapterStat[] = courseData.map((chapter) => {
       const chapterTotal = chapter.videos.length;
       let chapterCompleted = 0;
-      let chapterInProgress = 0;
       let chapterWatchedTime = 0;
       let chapterTotalTime = 0;
 
@@ -98,9 +95,6 @@ export const Dashboard: React.FC = () => {
           if (vidProg.completed) {
             completedVideos++;
             chapterCompleted++;
-          } else if (vidProg.currentTime > 0) {
-            inProgressVideos++;
-            chapterInProgress++;
           }
 
           const dur = vidProg.duration || 0;
@@ -118,7 +112,6 @@ export const Dashboard: React.FC = () => {
         ...chapter,
         total: chapterTotal,
         completed: chapterCompleted,
-        inProgress: chapterInProgress,
         watchedTime: chapterWatchedTime,
         totalTime: chapterTotalTime,
       };
@@ -129,7 +122,6 @@ export const Dashboard: React.FC = () => {
     return {
       totalVideos,
       completedVideos,
-      inProgressVideos,
       totalWatchedTime,
       totalTime,
       remainingVideos,
@@ -183,7 +175,6 @@ export const Dashboard: React.FC = () => {
   const {
     totalVideos,
     completedVideos,
-    inProgressVideos,
     totalWatchedTime,
     remainingVideos,
     chapterStats,
@@ -385,7 +376,6 @@ export const Dashboard: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6 }}>
               <OverallProgressCard
                 completedVideos={completedVideos}
-                inProgressVideos={inProgressVideos}
                 remainingVideos={remainingVideos}
                 totalVideos={totalVideos}
               />
