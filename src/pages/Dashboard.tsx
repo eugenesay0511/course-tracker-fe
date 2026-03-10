@@ -15,7 +15,6 @@ import {
 import {
   FolderOpen as ChapterIcon,
   Close as CloseIcon,
-  CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
@@ -598,18 +597,19 @@ export const Dashboard: React.FC = () => {
                                       justifyContent: "center",
                                       fontSize: "0.7rem",
                                       bgcolor: isCompleted
-                                        ? "success.main"
+                                        ? "rgba(34, 197, 94, 0.1)"
                                         : "action.hover",
                                       color: isCompleted
-                                        ? "white"
+                                        ? "success.main"
                                         : "text.secondary",
+                                      border: "1px solid",
+                                      borderColor: isCompleted
+                                        ? "success.main"
+                                        : "transparent",
+                                      fontWeight: isCompleted ? 800 : 500,
                                     }}
                                   >
-                                    {isCompleted ? (
-                                      <CheckCircleIcon sx={{ fontSize: 14 }} />
-                                    ) : (
-                                      vIdx + 1
-                                    )}
+                                    {vIdx + 1}
                                   </Box>
                                   {video.title}
                                 </Typography>
