@@ -7,7 +7,7 @@ import {
   Info as InfoIcon,
   Replay as RestartIcon,
 } from "@mui/icons-material";
-import { Divider } from "@mui/material";
+
 import type { VideoProgress, Bookmark } from "../types";
 import { BookmarksPanel, type BookmarksPanelHandle } from "./BookmarksPanel";
 import { useVideoShortcuts } from "../hooks/useVideoShortcuts";
@@ -306,10 +306,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             flexGrow: 1,
             minWidth: 0,
             display: "flex",
-            alignItems: "center",
-            gap: 2,
+            flexDirection: "column",
+            gap: 0.5,
           }}
         >
+          {chapterTitle && (
+            <Typography
+              sx={{
+                color: "primary.main",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontSize: "0.8rem",
+                opacity: 0.85,
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+              }}
+            >
+              <ChapterIcon sx={{ fontSize: 16 }} />
+              {chapterTitle}
+            </Typography>
+          )}
           <Typography
             variant="h5"
             sx={{
@@ -318,37 +336,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              lineHeight: 1.2,
             }}
           >
             {title}
           </Typography>
-          {chapterTitle && (
-            <>
-              <Divider
-                orientation="vertical"
-                flexItem
-                sx={{ height: 20, my: "auto", opacity: 0.3 }}
-              />
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  color: "text.secondary",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <ChapterIcon
-                  sx={{ fontSize: 16, color: "primary.main", opacity: 0.8 }}
-                />
-                {chapterTitle}
-              </Box>
-            </>
-          )}
         </Box>
         <Box sx={{ display: "flex", gap: 1, ml: 2, alignItems: "center" }}>
           {/* Bookmarks */}
