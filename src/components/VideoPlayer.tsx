@@ -244,7 +244,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         flexDirection: "column",
         height: "100%",
         bgcolor: "background.default",
-        px: 1,
+        px: { xs: 0, lg: 4 },
         borderRadius: 2,
       }}
     >
