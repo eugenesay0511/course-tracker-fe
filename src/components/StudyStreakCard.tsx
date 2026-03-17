@@ -237,9 +237,8 @@ export const StudyStreakCard: React.FC = () => {
                 display: "flex",
                 gap: 1,
                 alignItems: "flex-end",
-                height: 40,
-                mt: 1,
-                mb: 2,
+                height: 60,
+                mb: 1,
               }}
             >
               {last7Days.map((day) => {

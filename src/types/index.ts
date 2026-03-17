@@ -4,6 +4,7 @@ export interface CourseMeta {
   rootPath: string;
   lastAccessed: number;
   lastWatchedVideoId?: string | null;
+  color?: string;
 }
 
 export interface Video {

@@ -59,7 +59,7 @@ import { getStoredHandle } from "./utils/idb";
 function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeCourseId, setActiveCourseId] = useAtom(activeCourseIdAtom);
+  const activeCourseId = useAtomValue(activeCourseIdAtom);
   const isLibrary = !activeCourseId;
 
   const btnStyle = (isActive: boolean) => (theme: any) => ({
@@ -82,17 +82,6 @@ function Navigation() {
 
   return (
     <Box sx={{ display: "flex", gap: 1 }}>
-      <Button
-        color="inherit"
-        startIcon={<LibraryIcon />}
-        onClick={() => {
-          setActiveCourseId(null);
-          navigate("/");
-        }}
-        sx={btnStyle(isLibrary)}
-      >
-        Library
-      </Button>
       <Button
         color="inherit"
         startIcon={<DashboardIcon />}
@@ -200,6 +189,45 @@ function AppContent() {
               alignItems: "center",
             }}
           >
+            <Button
+              variant="text"
+              color="inherit"
+              startIcon={<LibraryIcon />}
+              onClick={() => {
+                setActiveCourseId(null);
+                navigate("/");
+              }}
+              sx={{
+                mr: 2,
+                px: 2,
+                py: 0.5,
+                borderRadius: "12px",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(255, 255, 255, 0.12)",
+                transition: "all 0.2s ease-in-out",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                "&:hover": {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 255, 255, 0.15)"
+                      : "rgba(0, 0, 0, 0.1)",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                },
+                "&:active": {
+                  transform: "translateY(0)",
+                },
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              Library
+            </Button>
             {hasData && <SearchBar />}
             <Tooltip title="Settings">
               <IconButton

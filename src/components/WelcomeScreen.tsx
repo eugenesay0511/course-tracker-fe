@@ -15,6 +15,7 @@ import {
   FormControlLabel,
   Checkbox,
   Alert,
+  Stack,
 } from "@mui/material";
 import {
   FolderOpen as FolderIcon,
@@ -25,6 +26,9 @@ import {
   DeleteOutline as DeleteIcon,
   School as CourseIcon,
   WarningAmber as WarningIcon,
+  Palette as CustomIcon,
+  FormatColorReset as ResetIcon,
+  Tune as SettingsIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
@@ -36,6 +40,19 @@ import { setStoredHandle, db, setIDBValue } from "../utils/idb";
 import { scanCourseDirectory } from "../utils/scanner";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { CourseMeta } from "../types";
+
+const COURSE_COLORS = [
+  "#3b82f6", // Blue
+  "#6366f1", // Indigo
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#ef4444", // Red
+  "#f97316", // Orange
+  "#f59e0b", // Amber
+  "#10b981", // Emerald
+  "#06b6d4", // Cyan
+  "#64748b", // Slate
+];
 
 export const WelcomeScreen: React.FC = () => {
   const setActiveCourseId = useSetAtom(activeCourseIdAtom);
@@ -49,6 +66,7 @@ export const WelcomeScreen: React.FC = () => {
   });
   const [browserError, setBrowserError] = useState(false);
   const [invalidCourseIds, setInvalidCourseIds] = useState<Set<string>>(new Set());
+  const [activeColorCourseId, setActiveColorCourseId] = useState<string | null>(null);
 
   const courses = useLiveQuery(() => db.courses.orderBy("lastAccessed").reverse().toArray());
 
@@ -126,6 +144,11 @@ export const WelcomeScreen: React.FC = () => {
     setDeleteDialog({ open: true, id, name, deleteProgress: false });
   };
 
+  const handleColorChange = async (e: any, id: string, color: string) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    await db.courses.update(id, { color });
+  };
+
   const confirmDelete = async () => {
     const { id, deleteProgress } = deleteDialog;
     
@@ -180,14 +203,15 @@ export const WelcomeScreen: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={course.id}>
               <Paper
                 onClick={() => handleCourseClick(course)}
+                className="transition-controls"
                 sx={{
                   p: 3,
                   height: "100%",
                   cursor: "pointer",
                   borderRadius: 4,
-                  border: "1px solid",
+                  border: 1,
                   borderColor: "divider",
-                  transition: "all 0.2s ease",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   position: "relative",
                   "&:hover": {
                     transform: "translateY(-4px)",
@@ -216,23 +240,41 @@ export const WelcomeScreen: React.FC = () => {
                       width: 48,
                       height: 48,
                       borderRadius: 3,
-                      bgcolor: "primary.main",
+                      bgcolor: course.color || "primary.main",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       color: "white",
+                      boxShadow: course.color ? `0 4px 12px ${course.color}4d` : "none",
+                      transition: "all 0.3s ease",
                     }}
                   >
                     <CourseIcon />
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                     {invalidCourseIds.has(course.id) && (
                       <Tooltip title="Folder not found or inaccessible">
-                        <IconButton size="small" color="error">
+                        <IconButton size="small" color="error" onClick={(e) => e.stopPropagation()}>
                           <WarningIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     )}
+                    <Tooltip title="Change Color">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveColorCourseId(course.id);
+                        }}
+                        sx={{ 
+                          color: 'inherit',
+                          '&:hover': { bgcolor: 'action.hover' }
+                        }}
+                      >
+                        <SettingsIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Remove from Library">
                       <IconButton
                         size="small"
@@ -248,10 +290,13 @@ export const WelcomeScreen: React.FC = () => {
                     variant="h6" 
                     fontWeight={800} 
                     sx={{ 
-                      color: invalidCourseIds.has(course.id) ? 'error.main' : 'text.primary',
+                      color: invalidCourseIds.has(course.id) 
+                        ? 'error.main' 
+                        : 'text.primary',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1
+                      gap: 1,
+                      transition: 'color 0.3s ease'
                     }}
                   >
                     {course.name}
@@ -270,6 +315,146 @@ export const WelcomeScreen: React.FC = () => {
             </Grid>
           ))}
         </Grid>
+
+        {/* Color Selection Dialog */}
+        <Dialog
+          open={Boolean(activeColorCourseId)}
+          onClose={() => setActiveColorCourseId(null)}
+          PaperProps={{
+            sx: {
+              p: 3,
+              borderRadius: 5,
+              width: "100%",
+              maxWidth: 320,
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.98)' : '#fff',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }
+          }}
+        >
+          {(() => {
+            const course = courses?.find(c => c.id === activeColorCourseId);
+            if (!course) return null;
+            return (
+              <Stack direction="column" gap={3} alignItems="center">
+                <Box
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 3,
+                    bgcolor: course.color || "primary.main",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    boxShadow: course.color ? `0 10px 20px -5px ${course.color}80` : "none",
+                    transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                    transform: 'scale(1.1)',
+                  }}
+                >
+                  <CourseIcon sx={{ fontSize: 32 }} />
+                </Box>
+
+                <Box sx={{ width: '100%' }}>
+                  <Typography variant="caption" fontWeight={800} sx={{ color: 'text.secondary', mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Quick Presets
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1.5 }}>
+                    {COURSE_COLORS.map((c) => (
+                      <Box
+                        key={c}
+                        onClick={() => handleColorChange(null, course.id, c)}
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          bgcolor: c,
+                          cursor: 'pointer',
+                          border: course.color === c ? '3px solid white' : '1px solid rgba(0,0,0,0.1)',
+                          boxShadow: course.color === c ? `0 0 0 2px ${c}` : 'none',
+                          '&:hover': { 
+                            transform: 'scale(1.2)',
+                            boxShadow: `0 8px 16px ${c}4d`,
+                          },
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+
+                <Box sx={{ width: '100%' }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="caption" fontWeight={800} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Professional Tune
+                    </Typography>
+                    <Box sx={{ 
+                      px: 1, 
+                      py: 0.25, 
+                      borderRadius: 1, 
+                      bgcolor: 'action.hover',
+                      fontFamily: 'monospace',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      color: course.color || 'primary.main'
+                    }}>
+                      {course.color?.toUpperCase() || 'DEFAULT'}
+                    </Box>
+                  </Stack>
+                  
+                  <Stack direction="row" gap={1} alignItems="center">
+                    <Tooltip title="Custom Color Picker">
+                      <IconButton 
+                        onClick={() => document.getElementById(`color-custom-dialog`)?.click()}
+                        sx={{ 
+                          bgcolor: course.color || 'primary.main',
+                          color: 'white',
+                          boxShadow: course.color ? `0 4px 12px ${course.color}4d` : 'none',
+                          '&:hover': { bgcolor: course.color || 'primary.main', filter: 'brightness(1.1)' }
+                        }}
+                      >
+                        <CustomIcon />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    <Box sx={{ flexGrow: 1, position: 'relative' }}>
+                      <input 
+                        type="color" 
+                        id="color-custom-dialog"
+                        style={{ 
+                          position: 'absolute',
+                          opacity: 0,
+                          width: 0,
+                          height: 0,
+                          pointerEvents: 'none'
+                        }}
+                        value={course.color || "#3b82f6"}
+                        onChange={(e) => handleColorChange(e, course.id, e.target.value)}
+                      />
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        startIcon={<ResetIcon />}
+                        onClick={() => handleColorChange(null, course.id, "")}
+                        sx={{ 
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontWeight: 700,
+                          borderColor: 'divider',
+                          color: 'text.secondary'
+                        }}
+                      >
+                        Reset Theme
+                      </Button>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Stack>
+            );
+          })()}
+        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <Dialog 
