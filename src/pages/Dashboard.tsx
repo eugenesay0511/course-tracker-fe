@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Grid,
-  Divider,
   Modal,
   Backdrop,
   Fade,
@@ -11,9 +10,14 @@ import {
   List,
   ListItem,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Alert,
 } from "@mui/material";
 import {
-  FolderOpen as ChapterIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -21,11 +25,8 @@ import { useNavigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
 import {
   courseDataStateAtom,
-  rootHandleAtom,
-  lastWatchedVideoIdAtom,
-  settingsAtom,
-  videoRootPathAtom,
-  permissionStatusAtom,
+  activeCourseIdAtom,
+  folderErrorAtom,
 } from "../store";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../utils/idb";
@@ -36,9 +37,6 @@ import { WelcomeBanner } from "../components/dashboard/WelcomeBanner";
 import { OverallProgressCard } from "../components/dashboard/OverallProgressCard";
 import { TimeWatchedCard } from "../components/dashboard/TimeWatchedCard";
 import { ChapterProgressCard } from "../components/dashboard/ChapterProgressCard";
-import { scanCourseDirectory } from "../utils/scanner";
-import { setStoredHandle } from "../utils/idb";
-import { useSetAtom } from "jotai";
 
 export type ChapterStat = Chapter & {
   total: number;
@@ -49,12 +47,18 @@ export type ChapterStat = Chapter & {
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const activeCourseId = useAtomValue(activeCourseIdAtom);
   const courseData = useAtomValue(courseDataStateAtom);
-  const rootHandle = useAtomValue(rootHandleAtom);
-  const videosProgressArray = useLiveQuery(
-    () => db.videoProgress.toArray(),
-    [],
-  );
+  const folderError = useAtomValue(folderErrorAtom);
+  const videosProgressArray = useLiveQuery(async () => {
+    if (!activeCourseId) return [];
+    const all = await db.videoProgress.toArray();
+    return all.filter(
+      (p) =>
+        p.videoId.startsWith(`${activeCourseId}::`) ||
+        (activeCourseId === "default" && !p.videoId.includes("::")),
+    );
+  }, [activeCourseId]);
   const videosProgress = useMemo(() => {
     const dict: Record<string, any> = {};
     if (videosProgressArray) {
@@ -64,13 +68,15 @@ export const Dashboard: React.FC = () => {
     }
     return dict;
   }, [videosProgressArray]);
-  const lastWatchedVideoId = useAtomValue(lastWatchedVideoIdAtom);
-  const settings = useAtomValue(settingsAtom);
-
-  const setVideoRootPath = useSetAtom(videoRootPathAtom);
-  const setCourseData = useSetAtom(courseDataStateAtom);
-  const setRootHandleState = useSetAtom(rootHandleAtom);
-  const setPermissionStatus = useSetAtom(permissionStatusAtom);
+  const activeCourse = useLiveQuery(
+    async () => {
+      if (!activeCourseId) return undefined;
+      return db.courses.get(activeCourseId);
+    },
+    [activeCourseId],
+  );
+  const lastWatchedVideoId = activeCourse?.lastWatchedVideoId || null;
+  const [browserError, setBrowserError] = useState(false);
 
   const [selectedChapter, setSelectedChapter] = useState<ChapterStat | null>(
     null,
@@ -188,55 +194,6 @@ export const Dashboard: React.FC = () => {
     targetVideoId,
   } = resumeInfo;
 
-  const folderName =
-    rootHandle?.name ||
-    (settings?.videoRootPath
-      ? settings.videoRootPath.split(/[/\\]/).filter(Boolean).pop()
-      : null);
-
-  const handleBrowseAndScan = async () => {
-    try {
-      if ("showDirectoryPicker" in window) {
-        // @ts-ignore
-        const handle = await (window as any).showDirectoryPicker();
-        if (handle) {
-          const folderName = handle.name;
-          let newPath = folderName;
-
-          const currentVal = settings.videoRootPath.trim();
-          if (currentVal) {
-            const strippedVal = currentVal.replace(/^["']|["']$/g, "");
-            const lastSlash = Math.max(
-              strippedVal.lastIndexOf("/"),
-              strippedVal.lastIndexOf("\\"),
-            );
-            if (lastSlash !== -1) {
-              const baseDir = strippedVal.substring(0, lastSlash + 1);
-              newPath = baseDir + folderName;
-            }
-          }
-
-          setRootHandleState(handle);
-          setStoredHandle(handle).catch((err) =>
-            console.error("Failed to store handle in IDB:", err),
-          );
-          setPermissionStatus("granted");
-
-          const scannedData = await scanCourseDirectory(handle);
-          setVideoRootPath(newPath);
-          setCourseData(scannedData);
-        }
-      } else {
-        alert(
-          "Your browser doesn't support directory scanning. Please update your path manually in Settings.",
-        );
-      }
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        console.error("Directory picker error:", err);
-      }
-    }
-  };
 
   return (
     <Box
@@ -285,76 +242,64 @@ export const Dashboard: React.FC = () => {
             lineHeight: 1.2,
           }}
         >
-          Learning Dashboard
+          {activeCourse?.name || "Learning Dashboard"}
         </Typography>
 
-        {folderName && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.2,
+            px: 2,
+            py: 0.8,
+            borderRadius: "100px",
+            bgcolor: "background.paper",
+            boxShadow: (theme) =>
+              theme.palette.mode === "dark"
+                ? "0 4px 20px rgba(0,0,0,0.4)"
+                : "0 4px 20px rgba(0,0,0,0.05)",
+            border: 1,
+            borderColor: "divider",
+          }}
+        >
           <Box
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              px: 2,
-              py: 1,
-              borderRadius: "100px",
-              bgcolor: "background.paper",
-              boxShadow: (theme) =>
-                theme.palette.mode === "dark"
-                  ? "0 4px 20px rgba(0,0,0,0.4)"
-                  : "0 4px 20px rgba(0,0,0,0.05)",
-              border: 1,
-              borderColor: "divider",
-              transition: "all 0.2s ease",
-              cursor: "pointer",
-              "&:hover": {
-                transform: "translateY(-1px)",
-                borderColor: "primary.main",
-                bgcolor: "action.hover",
-              },
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              bgcolor: "#10b981",
+              boxShadow: "0 0 10px rgba(16, 185, 129, 0.4)",
             }}
-            onClick={handleBrowseAndScan}
+          />
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 800,
+              color: "text.secondary",
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              fontSize: "0.65rem",
+            }}
           >
-            <ChapterIcon sx={{ fontSize: 20, color: "primary.main" }} />
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 700,
-                color: "text.primary",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {folderName}
-            </Typography>
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ height: 14, my: "auto", mx: 0.5, opacity: 0.5 }}
-            />
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
-              <Box
-                sx={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  bgcolor: "#10b981",
-                  boxShadow: "0 0 8px rgba(16, 185, 129, 0.4)",
-                }}
-              />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontWeight: 800,
-                  color: "#10b981",
-                  fontSize: "0.65rem",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                SYNCED
-              </Typography>
-            </Box>
-          </Box>
-        )}
+            Synced & Ready
+          </Typography>
+        </Box>
       </Box>
+      
+      {folderError && (
+        <Alert 
+          severity="error" 
+          variant="filled"
+          sx={{ 
+            mb: 4, 
+            borderRadius: 3, 
+            fontWeight: 700,
+            boxShadow: '0 8px 16px rgba(239, 68, 68, 0.2)'
+          }}
+        >
+          {folderError}
+        </Alert>
+      )}
 
       <Grid container spacing={3} sx={{ mt: 2, alignItems: "stretch" }}>
         {/* Quick Resume Banner */}
@@ -676,6 +621,36 @@ export const Dashboard: React.FC = () => {
           </Fade>
         </Modal>
       )}
+
+      {/* Browser Error Dialog */}
+      <Dialog 
+        open={browserError} 
+        onClose={() => setBrowserError(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.95)' : '#fff',
+            backdropFilter: 'blur(20px)',
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>Feature Not Available</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+            Your browser doesn't support local directory scanning. Please update your folder path manually in <strong>Settings</strong> or use a modern browser like <strong>Google Chrome</strong>.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => setBrowserError(false)} 
+            variant="contained" 
+            sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+          >
+            Understood
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -1,8 +1,8 @@
 import Dexie, { type Table } from "dexie";
-import type { VideoProgress, Bookmark, DailyWatchLog } from "../types";
+import type { VideoProgress, Bookmark, DailyWatchLog, CourseMeta } from "../types";
 
 const DB_NAME = "CourseTrackerDB";
-const HANDLE_KEY = "rootFolderHandle";
+const HANDLE_KEY_PREFIX = "rootFolderHandle_";
 
 class CourseTrackerDatabase extends Dexie {
   handles!: Table<FileSystemDirectoryHandle, string>;
@@ -10,6 +10,7 @@ class CourseTrackerDatabase extends Dexie {
   videoProgress!: Table<VideoProgress, string>;
   bookmarks!: Table<Bookmark, string>;
   dailyLogs!: Table<DailyWatchLog, string>;
+  courses!: Table<CourseMeta, string>;
 
   constructor() {
     super(DB_NAME);
@@ -51,22 +52,34 @@ class CourseTrackerDatabase extends Dexie {
           await tx.table("state").put(oldState, "course_tracker_progress");
         }
       });
+
+    this.version(4).stores({
+      courses: "id, lastAccessed",
+    });
   }
 }
 
 export const db = new CourseTrackerDatabase();
 
 export const setStoredHandle = async (
+  courseId: string,
   handle: FileSystemDirectoryHandle,
 ): Promise<void> => {
-  await db.handles.put(handle, HANDLE_KEY);
+  await db.handles.put(handle, `${HANDLE_KEY_PREFIX}${courseId}`);
 };
 
-export const getStoredHandle =
-  async (): Promise<FileSystemDirectoryHandle | null> => {
-    const handle = await db.handles.get(HANDLE_KEY);
-    return handle || null;
-  };
+export const getStoredHandle = async (
+  courseId: string,
+): Promise<FileSystemDirectoryHandle | null> => {
+  const handle = await db.handles.get(`${HANDLE_KEY_PREFIX}${courseId}`);
+  return handle || null;
+};
+
+// Legacy support for migration
+export const getLegacyStoredHandle = async (): Promise<FileSystemDirectoryHandle | null> => {
+  const handle = await db.handles.get("rootFolderHandle");
+  return handle || null;
+};
 
 export const setIDBValue = async (key: string, value: any): Promise<void> => {
   await db.state.put(value, key);
@@ -80,3 +93,4 @@ export const getIDBValue = async <T>(key: string): Promise<T | null> => {
 export const removeIDBValue = async (key: string): Promise<void> => {
   await db.state.delete(key);
 };
+

@@ -1,3 +1,11 @@
+export interface CourseMeta {
+  id: string;
+  name: string;
+  rootPath: string;
+  lastAccessed: number;
+  lastWatchedVideoId?: string | null;
+}
+
 export interface Video {
   id: string;
   title: string;
@@ -43,7 +51,8 @@ export interface Settings {
 }
 
 export interface CourseProgressState {
-  lastWatchedVideoId: string | null;
+  activeCourseId: string | null;
   settings: Settings;
   _isLoaded?: boolean;
 }
+

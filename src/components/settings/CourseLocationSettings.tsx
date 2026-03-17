@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Box, Typography, Paper, TextField, Button, Fade } from "@mui/material";
+import { Box, Typography, Paper, TextField, Button, Fade, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from "@mui/material";
 import { FolderOpen as FolderIcon } from "@mui/icons-material";
 import { scanCourseDirectory } from "../../utils/scanner";
+import { useAtomValue } from "jotai";
+import { activeCourseIdAtom } from "../../store";
 import type { Settings } from "../../types";
 
 interface CourseLocationSettingsProps {
@@ -22,6 +24,8 @@ export const CourseLocationSettings: React.FC<CourseLocationSettingsProps> = ({
   const [rootPath, setRootPath] = useState(settings.videoRootPath);
   const [error, setError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [browserError, setBrowserError] = useState(false);
+  const activeCourseId = useAtomValue(activeCourseIdAtom);
 
   const handleBrowseAndScan = async () => {
     try {
@@ -51,7 +55,10 @@ export const CourseLocationSettings: React.FC<CourseLocationSettingsProps> = ({
           // Store the handle for Vercel/Production mode
           setRootHandle(handle);
 
-          const scannedData = await scanCourseDirectory(handle);
+          const scannedData = await scanCourseDirectory(
+            handle,
+            activeCourseId || "default",
+          );
           setRootPath(newPath);
           onSavePath(newPath, scannedData);
 
@@ -59,9 +66,7 @@ export const CourseLocationSettings: React.FC<CourseLocationSettingsProps> = ({
           setTimeout(() => onClose(), 500);
         }
       } else {
-        alert(
-          "Your browser doesn't support directory scanning. Please update your path manually.",
-        );
+        setBrowserError(true);
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
@@ -212,6 +217,36 @@ export const CourseLocationSettings: React.FC<CourseLocationSettingsProps> = ({
           )}
         </Box>
       </Paper>
+
+      {/* Browser Error Dialog */}
+      <Dialog 
+        open={browserError} 
+        onClose={() => setBrowserError(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.95)' : '#fff',
+            backdropFilter: 'blur(20px)',
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>Feature Not Available</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+            Your browser doesn't support local directory scanning. You can still paste the folder path manually, but a modern browser like <strong>Google Chrome</strong> is recommended for the best experience.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => setBrowserError(false)} 
+            variant="contained" 
+            sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+          >
+            Understood
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

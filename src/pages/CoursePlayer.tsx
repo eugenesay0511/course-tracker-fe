@@ -14,12 +14,17 @@ import {
   autoplayAtom,
   outlinePositionAtom,
   playbackSpeedAtom,
-  lastWatchedVideoIdAtom,
+  activeCourseIdAtom,
+  folderErrorAtom,
   updateVideoProgress,
   markVideoUncompleted,
   addBookmark,
   removeBookmark,
 } from "../store";
+import { 
+  FolderOff as FolderOffIcon,
+  ArrowBack as BackIcon
+} from "@mui/icons-material";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../utils/idb";
 import type { VideoProgress } from "../types";
@@ -29,15 +34,34 @@ export const CoursePlayer: React.FC = () => {
   const rootHandle = useAtomValue(rootHandleAtom);
   const [permissionStatus, setPermissionStatus] = useAtom(permissionStatusAtom);
   const settings = useAtomValue(settingsAtom);
-  const [lastWatchedVideoId, setLastWatchedVideoId] = useAtom(
-    lastWatchedVideoIdAtom,
+  
+  const [activeCourseId, setActiveCourseId] = useAtom(activeCourseIdAtom);
+  const folderError = useAtomValue(folderErrorAtom);
+  const activeCourse = useLiveQuery(
+    async () => (activeCourseId ? db.courses.get(activeCourseId) : null),
+    [activeCourseId]
   );
+  const lastWatchedVideoId = activeCourse?.lastWatchedVideoId || null;
 
-  const bookmarksArray = useLiveQuery(() => db.bookmarks.toArray(), []);
-  const videosProgressArray = useLiveQuery(
-    () => db.videoProgress.toArray(),
-    [],
-  );
+  const bookmarksArray = useLiveQuery(async () => {
+    if (!activeCourseId) return [];
+    const all = await db.bookmarks.toArray();
+    return all.filter(
+      (b) =>
+        b.videoId.startsWith(`${activeCourseId}::`) ||
+        (activeCourseId === "default" && !b.videoId.includes("::")),
+    );
+  }, [activeCourseId]);
+
+  const videosProgressArray = useLiveQuery(async () => {
+    if (!activeCourseId) return [];
+    const all = await db.videoProgress.toArray();
+    return all.filter(
+      (p) =>
+        p.videoId.startsWith(`${activeCourseId}::`) ||
+        (activeCourseId === "default" && !p.videoId.includes("::")),
+    );
+  }, [activeCourseId]);
 
   const bookmarks = React.useMemo(() => bookmarksArray || [], [bookmarksArray]);
   const videosProgress = React.useMemo(() => {
@@ -137,10 +161,13 @@ export const CoursePlayer: React.FC = () => {
 
   // Update last watched video in store whenever active video changes
   useEffect(() => {
-    if (activeVideoId && activeVideoId !== lastWatchedVideoId) {
-      setLastWatchedVideoId(activeVideoId);
+    if (activeVideoId && activeVideoId !== lastWatchedVideoId && activeCourseId) {
+      db.courses.update(activeCourseId, {
+        lastWatchedVideoId: activeVideoId,
+        lastAccessed: Date.now(),
+      });
     }
-  }, [activeVideoId, lastWatchedVideoId, setLastWatchedVideoId]);
+  }, [activeVideoId, lastWatchedVideoId, activeCourseId]);
 
   // Handle manual video selection (via outline)
   const handleVideoSelect = React.useCallback(
@@ -290,6 +317,7 @@ export const CoursePlayer: React.FC = () => {
     prevVideo && setSearchParams({ v: String(prevVideo.id) });
 
   const needsPermission = rootHandle && permissionStatus === "prompt";
+  const isDataLoading = bookmarksArray === undefined || videosProgressArray === undefined;
 
   return (
     <Box
@@ -332,7 +360,51 @@ export const CoursePlayer: React.FC = () => {
           position: "relative",
         }}
       >
-        {needsPermission && (
+        {folderError ? (
+          <Box
+            sx={(theme) => ({
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(0,0,0,0.85)"
+                  : "rgba(255,255,255,0.85)",
+              zIndex: 10,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              p: 4,
+              backdropFilter: "blur(4px)",
+            })}
+          >
+            <FolderOffIcon sx={{ fontSize: 64, color: "error.main", mb: 2 }} />
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Folder Not Found
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ mb: 4, maxWidth: 500 }}
+            >
+              The folder for <strong>{activeCourse?.name}</strong> is missing or inaccessible. 
+              Video playback is disabled. To restore playback, please re-add this folder in the Library.
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<BackIcon />}
+              onClick={() => setActiveCourseId(null)}
+              sx={{ borderRadius: 2, px: 4, py: 1.5, fontWeight: "bold" }}
+            >
+              Go back to Library
+            </Button>
+          </Box>
+        ) : needsPermission && (
           <Box
             sx={(theme) => ({
               position: "absolute",
@@ -377,7 +449,7 @@ export const CoursePlayer: React.FC = () => {
           </Box>
         )}
 
-        {courseData.length === 0 ? (
+        {isDataLoading || courseData.length === 0 ? (
           <Box
             sx={{
               display: "flex",
@@ -387,7 +459,7 @@ export const CoursePlayer: React.FC = () => {
             }}
           >
             <Typography variant="h6" color="text.secondary">
-              Loading Course Data...
+              {isDataLoading ? "Loading Progress..." : "Loading Course Data..."}
             </Typography>
           </Box>
         ) : activeVideoId && activeVideo ? (

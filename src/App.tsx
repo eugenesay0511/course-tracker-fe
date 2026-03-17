@@ -14,8 +14,7 @@ import {
 import {
   Dashboard as DashboardIcon,
   PlayCircleFilled as PlayCourseIcon,
-  LightMode,
-  DarkMode,
+  LibraryBooks as LibraryIcon,
 } from "@mui/icons-material";
 import {
   BrowserRouter,
@@ -27,16 +26,16 @@ import {
 } from "react-router-dom";
 import { createAppTheme } from "./theme";
 const Dashboard = lazy(() =>
-  import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
+  import("./pages/Dashboard").then((m) => ({ default: m.Dashboard }))
 );
 const CoursePlayer = lazy(() =>
-  import("./pages/CoursePlayer").then((m) => ({ default: m.CoursePlayer })),
+  import("./pages/CoursePlayer").then((m) => ({ default: m.CoursePlayer }))
 );
 const Settings = lazy(() =>
-  import("./pages/Settings").then((m) => ({ default: m.Settings })),
+  import("./pages/Settings").then((m) => ({ default: m.Settings }))
 );
 const Bookmarks = lazy(() =>
-  import("./pages/Bookmarks").then((m) => ({ default: m.Bookmarks })),
+  import("./pages/Bookmarks").then((m) => ({ default: m.Bookmarks }))
 );
 import { SearchBar } from "./components/SearchBar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
@@ -51,37 +50,55 @@ import {
   themeModeAtom,
   courseDataStateAtom,
   isStoreLoadedAtom,
+  activeCourseIdAtom,
+  performMigrationAtom,
+  loadCourseDataAtom,
 } from "./store";
 import { getStoredHandle } from "./utils/idb";
 
 function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [activeCourseId, setActiveCourseId] = useAtom(activeCourseIdAtom);
+  const isLibrary = !activeCourseId;
+
+  const btnStyle = (isActive: boolean) => (theme: any) => ({
+    borderRadius: 2,
+    px: 2,
+    bgcolor: isActive
+      ? theme.palette.mode === "dark"
+        ? "rgba(255, 255, 255, 0.15)"
+        : "rgba(0, 0, 0, 0.1)"
+      : "transparent",
+    color: isActive ? "white" : "inherit",
+    fontWeight: isActive ? 700 : 500,
+    "&:hover": {
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? "rgba(255, 255, 255, 0.25)"
+          : "rgba(0, 0, 0, 0.2)",
+    },
+  });
 
   return (
     <Box sx={{ display: "flex", gap: 1 }}>
       <Button
         color="inherit"
+        startIcon={<LibraryIcon />}
+        onClick={() => {
+          setActiveCourseId(null);
+          navigate("/");
+        }}
+        sx={btnStyle(isLibrary)}
+      >
+        Library
+      </Button>
+      <Button
+        color="inherit"
         startIcon={<DashboardIcon />}
         onClick={() => navigate("/")}
-        sx={(theme) => ({
-          borderRadius: 2,
-          px: 2,
-          bgcolor:
-            location.pathname === "/"
-              ? theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.15)"
-                : "rgba(0, 0, 0, 0.1)"
-              : "transparent",
-          color: location.pathname === "/" ? "white" : "inherit",
-          fontWeight: location.pathname === "/" ? 700 : 500,
-          "&:hover": {
-            bgcolor:
-              theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.25)"
-                : "rgba(0, 0, 0, 0.2)",
-          },
-        })}
+        disabled={isLibrary}
+        sx={btnStyle(!isLibrary && location.pathname === "/")}
       >
         Dashboard
       </Button>
@@ -89,49 +106,17 @@ function Navigation() {
         color="inherit"
         startIcon={<PlayCourseIcon />}
         onClick={() => navigate("/course")}
-        sx={(theme) => ({
-          borderRadius: 2,
-          px: 2,
-          bgcolor:
-            location.pathname === "/course"
-              ? theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.15)"
-                : "rgba(0, 0, 0, 0.1)"
-              : "transparent",
-          color: location.pathname === "/course" ? "white" : "inherit",
-          fontWeight: location.pathname === "/course" ? 700 : 500,
-          "&:hover": {
-            bgcolor:
-              theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.25)"
-                : "rgba(0, 0, 0, 0.2)",
-          },
-        })}
+        disabled={isLibrary}
+        sx={btnStyle(!isLibrary && location.pathname === "/course")}
       >
-        Course Player
+        Player
       </Button>
       <Button
         color="inherit"
         startIcon={<BookmarkIcon />}
         onClick={() => navigate("/bookmarks")}
-        sx={(theme) => ({
-          borderRadius: 2,
-          px: 2,
-          bgcolor:
-            location.pathname === "/bookmarks"
-              ? theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.15)"
-                : "rgba(0, 0, 0, 0.1)"
-              : "transparent",
-          color: location.pathname === "/bookmarks" ? "white" : "inherit",
-          fontWeight: location.pathname === "/bookmarks" ? 700 : 500,
-          "&:hover": {
-            bgcolor:
-              theme.palette.mode === "dark"
-                ? "rgba(255, 255, 255, 0.25)"
-                : "rgba(0, 0, 0, 0.2)",
-          },
-        })}
+        disabled={isLibrary}
+        sx={btnStyle(!isLibrary && location.pathname === "/bookmarks")}
       >
         Bookmarks
       </Button>
@@ -139,42 +124,13 @@ function Navigation() {
   );
 }
 
-function ThemeToggle() {
-  const [mode, setMode] = useAtom(themeModeAtom);
-  const toggleTheme = () =>
-    setMode((prev) => (prev === "dark" ? "light" : "dark"));
 
-  return (
-    <Tooltip title={`Switch to ${mode === "dark" ? "Light" : "Dark"} Mode`}>
-      <IconButton onClick={toggleTheme} color="inherit">
-        {mode === "dark" ? <LightMode /> : <DarkMode />}
-      </IconButton>
-    </Tooltip>
-  );
-}
-
-function SettingsButton() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  return (
-    <Tooltip title="Settings">
-      <IconButton
-        color="inherit"
-        onClick={() => {
-          const nextParams = new URLSearchParams(searchParams);
-          nextParams.set("settings", "true");
-          setSearchParams(nextParams);
-        }}
-      >
-        <SettingsIcon />
-      </IconButton>
-    </Tooltip>
-  );
-}
 function AppContent() {
   const navigate = useNavigate();
   const isStoreLoaded = useAtomValue(isStoreLoadedAtom);
   const courseData = useAtomValue(courseDataStateAtom);
-  const hasData = courseData && courseData.length > 0;
+  const [activeCourseId, setActiveCourseId] = useAtom(activeCourseIdAtom);
+  const hasData = activeCourseId && courseData && courseData.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
   const isSettingsOpen = searchParams.get("settings") === "true";
 
@@ -220,7 +176,10 @@ function AppContent() {
               flex: 1,
               cursor: "pointer",
             }}
-            onClick={() => navigate("/")}
+            onClick={() => {
+              setActiveCourseId(null);
+              navigate("/");
+            }}
           >
             <Box
               component="img"
@@ -228,15 +187,11 @@ function AppContent() {
               sx={{ width: 32, height: 32, mr: 2 }}
               alt="WatchFlow"
             />
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{ fontWeight: "bold" }}
-            >
+            <Typography variant="h6" component="div" sx={{ fontWeight: "bold" }}>
               WatchFlow
             </Typography>
           </Box>
-          {hasData && <Navigation />}
+          <Navigation />
           <Box
             sx={{
               flex: 1,
@@ -246,8 +201,18 @@ function AppContent() {
             }}
           >
             {hasData && <SearchBar />}
-            <ThemeToggle />
-            <SettingsButton />
+            <Tooltip title="Settings">
+              <IconButton
+                color="inherit"
+                onClick={() => {
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.set("settings", "true");
+                  setSearchParams(nextParams);
+                }}
+              >
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>
@@ -296,15 +261,35 @@ function AppContent() {
   );
 }
 
-function HandleInitializer() {
+function StoreInitializer() {
   const setRootHandle = useSetAtom(rootHandleAtom);
   const setPermissionStatus = useSetAtom(permissionStatusAtom);
+  const activeCourseId = useAtomValue(activeCourseIdAtom);
+  const performMigration = useSetAtom(performMigrationAtom);
+  const loadCourseData = useSetAtom(loadCourseDataAtom);
 
+  // 1. Initial Migration Check
   useEffect(() => {
+    performMigration();
+  }, [performMigration]);
+
+  // 2. Load data when activeCourseId changes
+  useEffect(() => {
+    loadCourseData();
+  }, [activeCourseId, loadCourseData]);
+
+  // 3. Handle Initializer (Course Specific)
+  useEffect(() => {
+    if (!activeCourseId) {
+      setRootHandle(null);
+      setPermissionStatus(null);
+      return;
+    }
+
     let mounted = true;
     const initHandle = async () => {
       try {
-        const handle = await getStoredHandle();
+        const handle = await getStoredHandle(activeCourseId);
         if (handle && mounted) {
           setRootHandle(handle);
           // @ts-ignore
@@ -319,7 +304,7 @@ function HandleInitializer() {
     return () => {
       mounted = false;
     };
-  }, [setRootHandle, setPermissionStatus]);
+  }, [activeCourseId, setRootHandle, setPermissionStatus]);
 
   return null;
 }
@@ -331,7 +316,7 @@ function App() {
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
-      <HandleInitializer />
+      <StoreInitializer />
       <BrowserRouter>
         <AppContent />
       </BrowserRouter>
@@ -340,3 +325,4 @@ function App() {
 }
 
 export default App;
+

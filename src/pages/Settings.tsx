@@ -13,22 +13,20 @@ import {
   CheckCircle as SuccessIcon,
   Settings as SettingsIcon,
   Close as CloseIcon,
+  Palette as ThemeIcon,
+  LightMode as LightIcon,
+  DarkMode as DarkIcon,
 } from "@mui/icons-material";
-import { useSearchParams } from "react-router-dom";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
+  themeModeAtom,
   settingsAtom,
-  videoRootPathAtom,
   dailyGoalMinutesAtom,
-  courseDataStateAtom,
-  rootHandleAtom,
-  permissionStatusAtom,
   clearProgressAtom,
   importProgressAtom,
 } from "../store";
-import { db, setStoredHandle } from "../utils/idb";
+import { db } from "../utils/idb";
 import { getFormattedDateTime } from "../utils/formatters";
-import { CourseLocationSettings } from "../components/settings/CourseLocationSettings";
 import { StudyGoalSettings } from "../components/settings/StudyGoalSettings";
 import { DataStorageSettings } from "../components/settings/DataStorageSettings";
 
@@ -37,24 +35,11 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
   onClose,
 }) => {
   const settings = useAtomValue(settingsAtom);
-  const setVideoRootPath = useSetAtom(videoRootPathAtom);
+  const [mode, setMode] = useAtom(themeModeAtom);
   const setDailyGoal = useSetAtom(dailyGoalMinutesAtom);
-  const setCourseData = useSetAtom(courseDataStateAtom);
-  const setRootHandleState = useSetAtom(rootHandleAtom);
-  const setPermissionStatus = useSetAtom(permissionStatusAtom);
-  const courseData = useAtomValue(courseDataStateAtom);
   const clearProgressFn = useSetAtom(clearProgressAtom);
   const importProgressFn = useSetAtom(importProgressAtom);
 
-  const setRootHandle = (handle: FileSystemDirectoryHandle | null) => {
-    setRootHandleState(handle);
-    if (handle) {
-      setStoredHandle(handle).catch((err) =>
-        console.error("Failed to store handle in IDB:", err),
-      );
-      setPermissionStatus("granted");
-    }
-  };
 
   const exportProgress = async () => {
     // Collect all data from Jotai + Dexie
@@ -62,18 +47,10 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
     const bookmarks = await db.bookmarks.toArray();
     const dailyLogs = await db.dailyLogs.toArray();
 
-    // Convert video bindings array to an object dictionary for simpler JSON structure fallback
-    const videosDict: Record<string, any> = {};
-    videoProgress.forEach((v) => {
-      videosDict[v.videoId] = v;
-    });
-
     const dataToExport = {
-      settings,
-      videos: videosDict,
+      videos: videoProgress,
       bookmarks,
       dailyWatchLog: dailyLogs,
-      courseData,
     };
 
     const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -98,28 +75,7 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [, setError] = useState<string | null>(null);
-  const [searchParams] = useSearchParams();
 
-  const handleSavePath = (pathOverride?: string, newCourseData?: any[]) => {
-    let pathToSave =
-      pathOverride !== undefined ? pathOverride : settings.videoRootPath.trim();
-
-    // Remote surrounding quotes if pasted (e.g. "C:\Path" -> C:\Path)
-    pathToSave = pathToSave.replace(/^["']|["']$/g, "");
-
-    // Allow empty path ONLY if we are providing a new handle/data from scanning
-    if (!pathToSave && !newCourseData) {
-      setError("Please provide a path or use 'Select Folder'");
-      return;
-    }
-
-    setVideoRootPath(pathToSave);
-    if (newCourseData) {
-      setCourseData(newCourseData);
-    }
-    setSnackbarOpen(true);
-    setError(null);
-  };
 
   return (
     <Dialog
@@ -223,16 +179,78 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
 
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ p: { xs: 3, sm: 4 } }}>
-          {/* Group 1: Course Location */}
-          <CourseLocationSettings
-            settings={settings}
-            searchParams={searchParams}
-            onSavePath={handleSavePath}
-            setRootHandle={setRootHandle}
-            onClose={onClose}
-          />
+          {/* Group 0: Appearance (Theme) */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <ThemeIcon color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                Appearance
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                p: 2.5,
+                borderRadius: 3,
+                bgcolor: "background.default",
+                border: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Box>
+                <Typography variant="body2" fontWeight={700}>
+                  Theme Mode
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Choose between light and dark interface
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  p: 0.5,
+                  borderRadius: "100px",
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.05)"
+                      : "rgba(0,0,0,0.03)",
+                }}
+              >
+                <IconButton
+                  onClick={() => setMode("light")}
+                  sx={{
+                    borderRadius: "100px",
+                    px: 2,
+                    bgcolor: mode === "light" ? "white" : "transparent",
+                    color: mode === "light" ? "primary.main" : "text.secondary",
+                    boxShadow: mode === "light" ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
+                    "&:hover": { bgcolor: mode === "light" ? "white" : "action.hover" },
+                  }}
+                >
+                  <LightIcon sx={{ mr: 1, fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={700}>Light</Typography>
+                </IconButton>
+                <IconButton
+                  onClick={() => setMode("dark")}
+                  sx={{
+                    borderRadius: "100px",
+                    px: 2,
+                    bgcolor: mode === "dark" ? "primary.main" : "transparent",
+                    color: mode === "dark" ? "white" : "text.secondary",
+                    boxShadow: mode === "dark" ? "0 4px 12px rgba(59, 130, 246, 0.4)" : "none",
+                    "&:hover": { bgcolor: mode === "dark" ? "primary.main" : "action.hover" },
+                  }}
+                >
+                  <DarkIcon sx={{ mr: 1, fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={700}>Dark</Typography>
+                </IconButton>
+              </Box>
+            </Box>
+          </Box>
 
-          {/* Group 2: Daily Goal */}
+          {/* Group 1: Daily Goal */}
           <StudyGoalSettings settings={settings} setDailyGoal={setDailyGoal} />
 
           {/* Group 3: Data Management */}

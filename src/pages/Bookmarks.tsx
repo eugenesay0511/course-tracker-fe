@@ -40,7 +40,12 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
-import { courseDataStateAtom, removeBookmark, updateBookmark } from "../store";
+import {
+  courseDataStateAtom,
+  removeBookmark,
+  updateBookmark,
+  activeCourseIdAtom,
+} from "../store";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../utils/idb";
 import { formatTime } from "../utils/formatters";
@@ -50,7 +55,20 @@ type SortMode = "grouped" | "recent";
 export const Bookmarks: React.FC = () => {
   const theme = useTheme();
   const courseData = useAtomValue(courseDataStateAtom);
-  const bookmarksArray = useLiveQuery(() => db.bookmarks.toArray(), []);
+  const activeCourseId = useAtomValue(activeCourseIdAtom);
+
+  const bookmarksArray = useLiveQuery(async () => {
+    if (!activeCourseId) return [];
+    // Only return bookmarks that belong to the active course
+    // or are legacy bookmarks (no '::' in videoId) if we are in the default course
+    const all = await db.bookmarks.toArray();
+    return all.filter(
+      (b) =>
+        b.videoId.startsWith(`${activeCourseId}::`) ||
+        (activeCourseId === "default" && !b.videoId.includes("::")),
+    );
+  }, [activeCourseId]);
+
   const bookmarks = useMemo(() => bookmarksArray || [], [bookmarksArray]);
   const navigate = useNavigate();
 

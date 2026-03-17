@@ -2,16 +2,28 @@ import { atom } from "jotai";
 import { atomWithStorage, unwrap } from "jotai/utils";
 import type { PaletteMode } from "@mui/material";
 import { getTodayKey } from "../utils/formatters";
-import type { CourseProgressState, CourseData, Bookmark } from "../types";
-import { getIDBValue, setIDBValue, removeIDBValue } from "../utils/idb";
+import type {
+  CourseProgressState,
+  CourseData,
+  Bookmark,
+  CourseMeta,
+} from "../types";
+import {
+  getIDBValue,
+  setIDBValue,
+  removeIDBValue,
+  db,
+  getLegacyStoredHandle,
+  setStoredHandle,
+} from "../utils/idb";
 
 const STORAGE_KEY = "course_tracker_progress";
-const DATA_STORAGE_KEY = "course_tracker_data";
+export const DATA_STORAGE_KEY_PREFIX = "course_data_";
 const THEME_STORAGE_KEY = "watchflow-theme-mode";
 const DEFAULT_ROOT_PATH = "";
 
 const defaultProgress: CourseProgressState = {
-  lastWatchedVideoId: null,
+  activeCourseId: null,
   settings: {
     videoRootPath: DEFAULT_ROOT_PATH,
     autoplay: true,
@@ -25,16 +37,14 @@ const defaultProgress: CourseProgressState = {
 // --- Custom IDB Storage for Jotai ---
 const createIDBStorage = <T>(defaultValue: T) => ({
   getItem: async (key: string): Promise<T> => {
-    // 1. Try IndexedDB
     const idbValue = await getIDBValue<T>(key);
     if (idbValue !== null) return idbValue;
 
-    // 2. Fallback/Migration: Try localStorage
+    // Migration from localStorage
     const localValue = localStorage.getItem(key);
     if (localValue !== null) {
       try {
         const parsed = JSON.parse(localValue);
-        // Move to IDB and cleanup localStorage
         await setIDBValue(key, parsed);
         localStorage.removeItem(key);
         return parsed;
@@ -53,7 +63,7 @@ const createIDBStorage = <T>(defaultValue: T) => ({
   },
 });
 
-// --- Base Atoms with Storage ---
+// --- Base Atoms ---
 
 const baseCourseProgressStateAtom = atomWithStorage<CourseProgressState>(
   STORAGE_KEY,
@@ -64,9 +74,8 @@ const baseCourseProgressStateAtom = atomWithStorage<CourseProgressState>(
       const storage = createIDBStorage(defaultProgress);
       const parsed: any = await storage.getItem(key);
 
-      // Merge with defaults to ensure all fields exist
       return {
-        lastWatchedVideoId: parsed?.lastWatchedVideoId || null,
+        activeCourseId: parsed?.activeCourseId || null,
         settings: {
           ...defaultProgress.settings,
           ...(parsed?.settings || {}),
@@ -74,92 +83,226 @@ const baseCourseProgressStateAtom = atomWithStorage<CourseProgressState>(
         _isLoaded: true,
       };
     },
-  },
+  }
 );
+
 export const courseProgressStateAtom = unwrap(
   baseCourseProgressStateAtom,
-  (prev) => prev ?? defaultProgress,
+  (prev) => prev ?? defaultProgress
 );
 
-const EMPTY_COURSE_DATA: CourseData = [];
-
-const baseCourseDataStateAtom = atomWithStorage<CourseData>(
-  DATA_STORAGE_KEY,
-  EMPTY_COURSE_DATA,
-  createIDBStorage(EMPTY_COURSE_DATA),
-);
-export const courseDataStateAtom = unwrap(
-  baseCourseDataStateAtom,
-  (prev) => prev ?? EMPTY_COURSE_DATA,
-);
-
-// Atom for theme mode
 export const themeModeAtom = atomWithStorage<PaletteMode>(
   THEME_STORAGE_KEY,
-  "dark",
+  "dark"
 );
 
 // Non-serializable atoms
 export const rootHandleAtom = atom<FileSystemDirectoryHandle | null>(null);
 export const permissionStatusAtom = atom<PermissionState | null>(null);
+export const folderErrorAtom = atom<string | null>(null);
 
-// --- Derived Atoms (Getters/Setters) ---
+// Course Management Atoms
+export const activeCourseIdAtom = atom(
+  (get) => get(courseProgressStateAtom).activeCourseId,
+  (get, set, newId: string | null) => {
+    const prev = get(courseProgressStateAtom);
+    if (prev?._isLoaded === false) return;
+    set(courseProgressStateAtom, {
+      ...prev,
+      activeCourseId: newId,
+    });
+    // Clear data immediately to prevent mismatched rendering during switch
+    set(internalCourseDataAtom, EMPTY_COURSE_DATA);
+  }
+);
+
+// Course Data (Structure) Atom - Dynamic based on activeCourseId
+const EMPTY_COURSE_DATA: CourseData = [];
+const internalCourseDataAtom = atom<CourseData>(EMPTY_COURSE_DATA);
+
+export const courseDataStateAtom = atom(
+  (get) => get(internalCourseDataAtom),
+  async (get, set, newData: CourseData) => {
+    const courseId = get(activeCourseIdAtom);
+    if (!courseId) return;
+
+    set(internalCourseDataAtom, newData);
+    await setIDBValue(`${DATA_STORAGE_KEY_PREFIX}${courseId}`, newData);
+  }
+);
+
+// --- Store Initialization & Migration ---
 
 export const isStoreLoadedAtom = atom((get) => {
   const state = get(courseProgressStateAtom);
   return state._isLoaded === true;
 });
 
-// Settings
+// Loader to trigger whenever activeCourseId changes
+export const loadCourseDataAtom = atom(null, async (get, set) => {
+  const courseId = get(activeCourseIdAtom);
+  if (!courseId) {
+    set(internalCourseDataAtom, EMPTY_COURSE_DATA);
+    set(folderErrorAtom, null);
+    set(rootHandleAtom, null);
+    return;
+  }
+
+  // Check Handle & Folder existence
+  try {
+    const handle = await db.handles.get(`rootFolderHandle_${courseId}`);
+    if (!handle) {
+      set(folderErrorAtom, "Folder connection lost. Please re-add the course from the Library.");
+      set(rootHandleAtom, null);
+    } else {
+      // Try to access
+      try {
+        const it = (handle as any).entries();
+        await it.next();
+        set(folderErrorAtom, null);
+        set(rootHandleAtom, handle);
+      } catch (e) {
+        set(folderErrorAtom, "Folder is missing or inaccessible. Video playback will not work.");
+        set(rootHandleAtom, null);
+      }
+    }
+  } catch (e) {
+    set(folderErrorAtom, "Failed to verify folder access.");
+    set(rootHandleAtom, null);
+  }
+
+  const storedData = await getIDBValue<CourseData>(
+    `${DATA_STORAGE_KEY_PREFIX}${courseId}`
+  );
+  set(internalCourseDataAtom, storedData || EMPTY_COURSE_DATA);
+});
+
+// Migration logic to wrap single-course into multi-course & fix legacy IDs
+export const performMigrationAtom = atom(null, async (_get, set) => {
+  const courses = await db.courses.toArray();
+  const legacyHandle = await getLegacyStoredHandle();
+
+  let courseId = "default";
+
+  // 1. Account Migration: Wrap legacy single-course into a proper course object
+  if (courses.length === 0 && legacyHandle) {
+    const legacyData = await getIDBValue<CourseData>("course_tracker_data");
+    const legacyProgress = await getIDBValue<any>(STORAGE_KEY);
+    if (legacyData) {
+      let lastWatchedId = legacyProgress?.lastWatchedVideoId || null;
+      if (lastWatchedId && !lastWatchedId.includes("::")) {
+        lastWatchedId = `${courseId}::${lastWatchedId}`;
+      }
+
+      const courseMeta: CourseMeta = {
+        id: courseId,
+        name: legacyHandle.name || "Default Course",
+        rootPath: legacyHandle.name || "",
+        lastAccessed: Date.now(),
+        lastWatchedVideoId: lastWatchedId,
+      };
+
+      await db.courses.put(courseMeta);
+      await setStoredHandle(courseId, legacyHandle);
+      await setIDBValue(`${DATA_STORAGE_KEY_PREFIX}${courseId}`, legacyData);
+
+      set(activeCourseIdAtom, courseId);
+      set(internalCourseDataAtom, legacyData);
+    }
+  }
+
+  // 2. ID Migration: Fix legacy (unprefixed) video IDs in progress and bookmarks
+  // We do this even if courses exist, in case the previous migration was incomplete.
+  const legacyVideoCount = await db.videoProgress
+    .filter((p) => !p.videoId.includes("::"))
+    .count();
+  const legacyBookmarkCount = await db.bookmarks
+    .filter((b) => !b.videoId.includes("::"))
+    .count();
+
+  if (legacyVideoCount > 0 || legacyBookmarkCount > 0) {
+    console.log(`Migrating ${legacyVideoCount} videos and ${legacyBookmarkCount} bookmarks...`);
+
+    // 1. Video Progress
+    const allProgress = await db.videoProgress.toArray();
+    for (const prog of allProgress) {
+      if (!prog.videoId.includes("::")) {
+        await db.videoProgress.delete(prog.videoId);
+        await db.videoProgress.put({
+          ...prog,
+          videoId: `${courseId}::${prog.videoId}`,
+        });
+      }
+    }
+
+    // 2. Bookmarks
+    const allBookmarks = await db.bookmarks.toArray();
+    for (const bm of allBookmarks) {
+      if (!bm.videoId.includes("::")) {
+        await db.bookmarks.put({
+          ...bm,
+          videoId: `${courseId}::${bm.videoId}`,
+        });
+      }
+    }
+
+    // 3. Last Watched in Course Meta
+    const defaultCourse = await db.courses.get(courseId);
+    if (defaultCourse && defaultCourse.lastWatchedVideoId && !defaultCourse.lastWatchedVideoId.includes("::")) {
+      defaultCourse.lastWatchedVideoId = `${courseId}::${defaultCourse.lastWatchedVideoId}`;
+      await db.courses.put(defaultCourse);
+    }
+  }
+});
+
+// --- Derived Settings Atoms ---
+
 export const settingsAtom = atom(
   (get) => get(courseProgressStateAtom).settings,
   (get, set, newSettings: Partial<CourseProgressState["settings"]>) => {
     const prev = get(courseProgressStateAtom);
-    // Don't update if still loading from storage to prevent overwriting with defaults
     if (prev?._isLoaded === false) return;
     set(courseProgressStateAtom, {
       ...prev,
       settings: { ...(prev?.settings || {}), ...newSettings },
     });
-  },
+  }
 );
 
 export const videoRootPathAtom = atom(
   (get) => get(settingsAtom).videoRootPath,
   (_, set, videoRootPath: string) => {
     set(settingsAtom, { videoRootPath });
-  },
+  }
 );
 
 export const autoplayAtom = atom(
   (get) => get(settingsAtom).autoplay,
   (_, set, autoplay: boolean) => {
     set(settingsAtom, { autoplay });
-  },
+  }
 );
 
 export const outlinePositionAtom = atom(
   (get) => get(settingsAtom).outlinePosition,
   (_, set, outlinePosition: "left" | "right") => {
     set(settingsAtom, { outlinePosition });
-  },
+  }
 );
 
 export const dailyGoalMinutesAtom = atom(
   (get) => get(settingsAtom).dailyGoalMinutes,
   (_, set, dailyGoalMinutes: number) => {
     set(settingsAtom, { dailyGoalMinutes });
-  },
+  }
 );
 
 export const playbackSpeedAtom = atom(
   (get) => get(settingsAtom).playbackSpeed,
   (_, set, playbackSpeed: number) => {
     set(settingsAtom, { playbackSpeed });
-  },
+  }
 );
-
-import { db } from "../utils/idb";
 
 // --- Async Functions for Dexie Operations ---
 
@@ -189,8 +332,6 @@ export const updateVideoProgress = async ({
     } else {
       await db.dailyLogs.put({ date: today, watchedSeconds: delta });
     }
-
-    // Optional: cleanup old logs > 90 days could be done periodically
   }
 
   await db.videoProgress.put({
@@ -199,6 +340,21 @@ export const updateVideoProgress = async ({
     duration,
     completed,
   });
+
+  // Update last watched in course meta
+  let courseId = "default";
+  if (videoId.includes("::")) {
+    [courseId] = videoId.split("::");
+  }
+
+  if (courseId) {
+    const course = await db.courses.get(courseId);
+    if (course) {
+      course.lastWatchedVideoId = videoId;
+      course.lastAccessed = Date.now();
+      await db.courses.put(course);
+    }
+  }
 };
 
 export const markVideoCompleted = async (videoId: string) => {
@@ -260,35 +416,59 @@ export const updateBookmark = async ({
   }
 };
 
-// Helpers
+// --- Last Watched Atom (Course Specific) ---
 export const lastWatchedVideoIdAtom = atom(
-  (get) => get(courseProgressStateAtom).lastWatchedVideoId,
-  (get, set, videoId: string | null) => {
-    const prev = get(courseProgressStateAtom);
-    if (prev?._isLoaded === false) return;
-    set(courseProgressStateAtom, {
-      ...prev,
-      lastWatchedVideoId: videoId,
-    });
+  async (get) => {
+    const courseId = get(activeCourseIdAtom);
+    if (!courseId) return null;
+    const course = await db.courses.get(courseId);
+    return course?.lastWatchedVideoId || null;
   },
+  async (get, _set, videoId: string | null) => {
+    const courseId = get(activeCourseIdAtom);
+    if (!courseId) return;
+
+    const course = await db.courses.get(courseId);
+    if (course) {
+      course.lastWatchedVideoId = videoId;
+      course.lastAccessed = Date.now();
+      await db.courses.put(course);
+    }
+  }
 );
 
 // Clear progress goes to Dexie too
-export const clearProgressAtom = atom(null, async (get, set) => {
-  const prev = get(courseProgressStateAtom);
-  set(courseProgressStateAtom, {
-    ...prev,
-    lastWatchedVideoId: null,
-  });
-  await db.videoProgress.clear();
-  await db.bookmarks.clear();
-  await db.dailyLogs.clear();
+export const clearProgressAtom = atom(null, async (get, _set) => {
+  const courseId = get(activeCourseIdAtom);
+  if (!courseId) return;
+
+  // Clear specific course progress?
+  // For now, we'll follow the existing pattern of clearing everything if called.
+  // But strictly, we should only clear videos starting with courseId::
+  const allProgress = await db.videoProgress.toArray();
+  const toDelete = allProgress
+    .filter((p) => p.videoId.startsWith(`${courseId}::`) || !p.videoId.includes("::"))
+    .map((p) => p.videoId);
+  await db.videoProgress.bulkDelete(toDelete);
+
+  const allBookmarks = await db.bookmarks.toArray();
+  const bookmarksToDelete = allBookmarks
+    .filter((b) => b.videoId.startsWith(`${courseId}::`) || !b.videoId.includes("::"))
+    .map((b) => b.id);
+  await db.bookmarks.bulkDelete(bookmarksToDelete);
+
+  // Clear last watched
+  const course = await db.courses.get(courseId);
+  if (course) {
+    course.lastWatchedVideoId = null;
+    await db.courses.put(course);
+  }
 });
 
 // Import progress logic updated
 export const importProgressAtom = atom(
   null,
-  async (_get, set, jsonString: string) => {
+  async (get, set, jsonString: string) => {
     try {
       const parsed = JSON.parse(jsonString);
       if (parsed && typeof parsed === "object") {
@@ -297,7 +477,7 @@ export const importProgressAtom = atom(
             ([id, val]: any) => ({
               videoId: id,
               ...val,
-            }),
+            })
           );
           await db.videoProgress.bulkPut(videoArray);
         }
@@ -309,10 +489,10 @@ export const importProgressAtom = atom(
           set(courseDataStateAtom, parsed.courseData);
         }
 
-        const prev = _get(courseProgressStateAtom);
+        const prev = get(courseProgressStateAtom);
         set(courseProgressStateAtom, {
           ...prev,
-          lastWatchedVideoId: parsed.lastWatchedVideoId || null,
+          activeCourseId: parsed.activeCourseId || prev.activeCourseId,
           settings: {
             ...(prev?.settings || {}),
             ...(parsed.settings || {}),
@@ -326,5 +506,6 @@ export const importProgressAtom = atom(
       console.error("Failed to import progress", e);
     }
     return false;
-  },
+  }
 );
+
