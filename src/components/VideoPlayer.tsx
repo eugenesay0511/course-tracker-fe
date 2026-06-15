@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Box, Typography, IconButton, Tooltip, Stack } from "@mui/material";
 import {
   NavigateNext as NextIcon,
@@ -9,6 +10,7 @@ import {
 } from "@mui/icons-material";
 
 import type { VideoProgress, Bookmark } from "../types";
+import { formatTime } from "../utils/formatters";
 import { BookmarksPanel, type BookmarksPanelHandle } from "./BookmarksPanel";
 import { useVideoShortcuts } from "../hooks/useVideoShortcuts";
 import { VideoShortcutsModal } from "./video/VideoShortcutsModal";
@@ -22,11 +24,138 @@ import {
   MediaProvider,
   Track,
   type MediaPlayerInstance,
+  useMediaState,
 } from "@vidstack/react";
 import {
   defaultLayoutIcons,
   DefaultVideoLayout,
 } from "@vidstack/react/player/layouts/default";
+
+interface BookmarkMarkersProps {
+  bookmarks: Bookmark[];
+  onSeek: (time: number) => void;
+  playerRef: React.RefObject<MediaPlayerInstance | null>;
+  videoId: string;
+}
+
+const BookmarkMarkers: React.FC<BookmarkMarkersProps> = ({
+  bookmarks,
+  onSeek,
+  playerRef,
+  videoId,
+}) => {
+  const duration = useMediaState("duration", playerRef);
+  const [sliderTrackEl, setSliderTrackEl] = useState<Element | null>(null);
+
+  useEffect(() => {
+    setSliderTrackEl(null);
+    const interval = setInterval(() => {
+      const playerEl = (playerRef.current as any)?.el || document;
+      const el = playerEl.querySelector(".vds-time-slider");
+      if (el) {
+        setSliderTrackEl(el);
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [videoId, playerRef]);
+
+  const currentVideoBookmarks = bookmarks.filter((b) => b.videoId === videoId);
+
+  if (!sliderTrackEl || !duration || duration <= 0 || currentVideoBookmarks.length === 0) return null;
+
+  return createPortal(
+    <div
+      className="bookmarks-progress-overlay"
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        pointerEvents: "none",
+        zIndex: 20,
+      }}
+    >
+      {currentVideoBookmarks.map((bookmark) => {
+        const percentage = (bookmark.timestamp / duration) * 100;
+        return (
+          <Tooltip
+            key={bookmark.id}
+            title={
+              <Box sx={{ p: 0.25 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "common.white",
+                    fontSize: "0.875rem",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {bookmark.note || "Bookmark"}
+                </Typography>
+              </Box>
+            }
+            placement="top"
+            arrow
+            enterDelay={0}
+            leaveDelay={150}
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: "rgba(28, 28, 30, 0.95)",
+                  backdropFilter: "blur(6px)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                  p: 1.25,
+                  borderRadius: "8px",
+                  maxWidth: 260,
+                },
+              },
+              arrow: {
+                sx: {
+                  color: "rgba(28, 28, 30, 0.95)",
+                },
+              },
+            }}
+          >
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onSeek(bookmark.timestamp);
+              }}
+              style={{
+                position: "absolute",
+                left: `${percentage}%`,
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                backgroundColor: "#f59e0b", // Warm Amber/Gold
+                border: "1.5px solid white",
+                cursor: "pointer",
+                pointerEvents: "auto",
+                transition: "transform 0.1s ease, background-color 0.1s ease",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.6)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translate(-50%, -50%) scale(1.5)";
+                e.currentTarget.style.backgroundColor = "#fbbf24"; // Lighter gold hover
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translate(-50%, -50%) scale(1)";
+                e.currentTarget.style.backgroundColor = "#f59e0b";
+              }}
+            />
+          </Tooltip>
+        );
+      })}
+    </div>,
+    sliderTrackEl
+  );
+};
 
 interface VideoPlayerProps {
   videoId: string;
@@ -292,6 +421,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             )}
           </MediaProvider>
           <DefaultVideoLayout icons={defaultLayoutIcons} />
+          <BookmarkMarkers
+            bookmarks={bookmarks}
+            onSeek={(t) => {
+              if (playerRef.current) playerRef.current.currentTime = t;
+            }}
+            playerRef={playerRef}
+            videoId={videoId}
+          />
         </MediaPlayer>
       </Box>
 

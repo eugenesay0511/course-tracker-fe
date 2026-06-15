@@ -598,26 +598,6 @@ export const Bookmarks: React.FC = () => {
                             border: "none",
                           }}
                         />
-                        <Tooltip title="Play complete video">
-                          <IconButton
-                            className="play-icon"
-                            color="primary"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(
-                                `/course?v=${encodeURIComponent(videoId)}`,
-                              );
-                            }}
-                            sx={{
-                              transition:
-                                "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                              bgcolor: alpha(theme.palette.primary.main, 0.05),
-                            }}
-                          >
-                            <PlayIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
                       </Box>
                     </Box>
                   </AccordionSummary>
