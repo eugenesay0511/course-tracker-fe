@@ -177,11 +177,7 @@ function AppContent() {
           >
             {/* Logo */}
             <Box
-              sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-              onClick={() => {
-                setActiveCourseId(null);
-                navigate("/");
-              }}
+              sx={{ display: "flex", alignItems: "center" }}
             >
               <Box
                 component="img"
@@ -237,11 +233,6 @@ function AppContent() {
               display: { xs: "none", md: "flex" },
               alignItems: "center",
               flex: 1,
-              cursor: "pointer",
-            }}
-            onClick={() => {
-              setActiveCourseId(null);
-              navigate("/");
             }}
           >
             <Box
