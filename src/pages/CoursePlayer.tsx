@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Typography, Button } from "@mui/material";
+import { Box, Typography, Button, Drawer } from "@mui/material";
 import { Lock as LockIcon } from "@mui/icons-material";
 import { useSearchParams } from "react-router-dom";
 
@@ -23,7 +23,8 @@ import {
 } from "../store";
 import { 
   FolderOff as FolderOffIcon,
-  ArrowBack as BackIcon
+  ArrowBack as BackIcon,
+  Menu as MenuIcon
 } from "@mui/icons-material";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../utils/idb";
@@ -122,6 +123,7 @@ export const CoursePlayer: React.FC = () => {
     }
   }, [rootHandle, setPermissionStatus]);
 
+  const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string | null>(null);
   const [resolvedSubtitleSrc, setResolvedSubtitleSrc] = useState<string | null>(
@@ -178,6 +180,7 @@ export const CoursePlayer: React.FC = () => {
       // We ONLY update the URL here. The useEffect above will catch this change
       // and update the `activeVideoId` state, acting as a single source of truth.
       setSearchParams({ v: String(v.id) });
+      setIsOutlineOpen(false); // Close mobile drawer
     },
     [setSearchParams],
   );
@@ -333,8 +336,10 @@ export const CoursePlayer: React.FC = () => {
         overflow: "hidden",
       }}
     >
+      {/* Desktop Sidebar */}
       <Box
         sx={{
+          display: { xs: "none", md: "block" },
           width: "350px",
           flexShrink: 0,
           borderRight: settings?.outlinePosition === "right" ? 0 : 1,
@@ -353,16 +358,57 @@ export const CoursePlayer: React.FC = () => {
         />
       </Box>
 
+      {/* Mobile/Tablet Sidebar Drawer */}
+      <Drawer
+        anchor={settings?.outlinePosition === "right" ? "right" : "left"}
+        open={isOutlineOpen}
+        onClose={() => setIsOutlineOpen(false)}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            width: "320px",
+            boxSizing: "border-box",
+            bgcolor: "background.default",
+          },
+        }}
+      >
+        <Box sx={{ height: "100%", overflow: "hidden" }} onClick={() => setIsOutlineOpen(false)}>
+          <CourseOutline
+            data={courseData}
+            activeVideoId={activeVideoId}
+            onVideoSelect={handleVideoSelect}
+            getProgress={getProgress}
+            markVideoUncompleted={markVideoUncompletedWrapper}
+            outlinePosition={settings?.outlinePosition}
+            onTogglePosition={setOutlinePosition}
+          />
+        </Box>
+      </Drawer>
+
       <Box
         sx={{
           flexGrow: 1,
-          p: 3,
+          px: { xs: 0, sm: 3 },
+          py: { xs: 1.5, sm: 3 },
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
           position: "relative",
         }}
       >
+        {!isDataLoading && courseData.length > 0 && activeVideoId && activeVideo && (
+          <Box sx={{ display: { xs: "flex", md: "none" }, mb: 2, px: 1.5, alignItems: "center" }}>
+            <Button
+              variant="outlined"
+              startIcon={<MenuIcon />}
+              onClick={() => setIsOutlineOpen(true)}
+              size="small"
+              sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600 }}
+            >
+              Course Outline
+            </Button>
+          </Box>
+        )}
         {folderError ? (
           <Box
             sx={(theme) => ({

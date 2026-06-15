@@ -157,10 +157,84 @@ function AppContent() {
       }}
     >
       <AppBar position="static" elevation={1}>
-        <Toolbar sx={{ justifyContent: "center" }}>
+        <Toolbar
+          sx={{
+            flexDirection: { xs: "column", md: "row" },
+            alignItems: "center",
+            py: { xs: 1.5, md: 0 },
+            gap: { xs: 1.5, md: 0 },
+            minHeight: { xs: "auto", md: 64 },
+          }}
+        >
+          {/* Logo and Actions container for Mobile layout */}
           <Box
             sx={{
-              display: "flex",
+              display: { xs: "flex", md: "none" },
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            {/* Logo */}
+            <Box
+              sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+              onClick={() => {
+                setActiveCourseId(null);
+                navigate("/");
+              }}
+            >
+              <Box
+                component="img"
+                src="/brain.svg"
+                sx={{ width: 28, height: 28, mr: 1 }}
+                alt="WatchFlow"
+              />
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                WatchFlow
+              </Typography>
+            </Box>
+
+            {/* Actions */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Tooltip title="Library">
+                <IconButton
+                  color="inherit"
+                  onClick={() => {
+                    setActiveCourseId(null);
+                    navigate("/");
+                  }}
+                  size="small"
+                  sx={{
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "rgba(0, 0, 0, 0.05)",
+                  }}
+                >
+                  <LibraryIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {hasData && <SearchBar />}
+              <Tooltip title="Settings">
+                <IconButton
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    const nextParams = new URLSearchParams(searchParams);
+                    nextParams.set("settings", "true");
+                    setSearchParams(nextParams);
+                  }}
+                >
+                  <SettingsIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
+
+          {/* Desktop Layout - Left Logo */}
+          <Box
+            sx={{
+              display: { xs: "none", md: "flex" },
               alignItems: "center",
               flex: 1,
               cursor: "pointer",
@@ -180,11 +254,17 @@ function AppContent() {
               WatchFlow
             </Typography>
           </Box>
-          <Navigation />
+
+          {/* Navigation (Shows in center on Desktop, full width on Mobile) */}
+          <Box sx={{ width: { xs: "100%", md: "auto" }, display: "flex", justifyContent: "center" }}>
+            <Navigation />
+          </Box>
+
+          {/* Desktop Layout - Right Actions */}
           <Box
             sx={{
+              display: { xs: "none", md: "flex" },
               flex: 1,
-              display: "flex",
               justifyContent: "flex-end",
               alignItems: "center",
             }}

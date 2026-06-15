@@ -397,6 +397,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           ref={playerRef}
           src={videoSrc ? { src: videoSrc, type: "video/mp4" } : ""}
           title={title}
+          playsinline
           fullscreenOrientation="none"
           keyShortcuts={{ seekForward: null, seekBackward: null }}
           onTimeUpdate={handleTimeUpdate}
@@ -432,14 +433,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       </Box>
 
       <Stack
-        direction="row"
+        direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 2 }}
+        alignItems={{ xs: "flex-start", md: "center" }}
+        spacing={2}
+        sx={{ mb: 2, px: { xs: 1.5, sm: 0 } }}
       >
         <Box
           sx={{
             flexGrow: 1,
+            width: "100%",
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
@@ -469,16 +472,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             sx={{
               fontWeight: 800,
               letterSpacing: "-0.02em",
-              whiteSpace: "nowrap",
+              whiteSpace: "normal", // allow wrap on mobile instead of clipping
               overflow: "hidden",
               textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
               lineHeight: 1.2,
             }}
           >
             {title}
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", gap: 1, ml: 2, alignItems: "center" }}>
+        <Box sx={{ display: "flex", gap: 1, ml: { xs: 0, md: 2 }, flexWrap: "wrap", alignItems: "center" }}>
           {/* Bookmarks */}
           {onAddBookmark && onRemoveBookmark && (
             <BookmarksPanel
