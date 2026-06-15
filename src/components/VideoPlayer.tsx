@@ -10,7 +10,6 @@ import {
 } from "@mui/icons-material";
 
 import type { VideoProgress, Bookmark } from "../types";
-import { formatTime } from "../utils/formatters";
 import { BookmarksPanel, type BookmarksPanelHandle } from "./BookmarksPanel";
 import { useVideoShortcuts } from "../hooks/useVideoShortcuts";
 import { VideoShortcutsModal } from "./video/VideoShortcutsModal";

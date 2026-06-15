@@ -70,7 +70,6 @@ export const Bookmarks: React.FC = () => {
   }, [activeCourseId]);
 
   const bookmarks = useMemo(() => bookmarksArray || [], [bookmarksArray]);
-  const navigate = useNavigate();
 
   const [filter, setFilter] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("grouped");
