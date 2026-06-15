@@ -139,6 +139,8 @@ export const CoursePlayer: React.FC = () => {
 
   // Sync active video from query param, last watched, or the first video of the course
   useEffect(() => {
+    if (activeCourse === undefined) return; // Wait until active course is loaded
+
     // If a URL parameter is present, it is the absolute source of truth.
     if (videoIdParam) {
       if (String(activeVideoId) !== videoIdParam) {
@@ -157,17 +159,18 @@ export const CoursePlayer: React.FC = () => {
         setActiveVideoId(String(courseData[0].videos[0].id));
       }
     }
-  }, [videoIdParam, lastWatchedVideoId, courseData, activeVideoId]);
+  }, [videoIdParam, lastWatchedVideoId, courseData, activeVideoId, activeCourse]);
 
   // Update last watched video in store whenever active video changes
   useEffect(() => {
+    if (activeCourse === undefined) return; // Wait until active course is loaded
     if (activeVideoId && activeVideoId !== lastWatchedVideoId && activeCourseId) {
       db.courses.update(activeCourseId, {
         lastWatchedVideoId: activeVideoId,
         lastAccessed: Date.now(),
       });
     }
-  }, [activeVideoId, lastWatchedVideoId, activeCourseId]);
+  }, [activeVideoId, lastWatchedVideoId, activeCourseId, activeCourse]);
 
   // Handle manual video selection (via outline)
   const handleVideoSelect = React.useCallback(
