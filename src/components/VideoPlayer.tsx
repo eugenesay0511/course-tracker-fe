@@ -345,6 +345,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [vttUrl]);
 
+  const saveCurrentProgress = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    const currentTime = player.state.currentTime;
+    const duration = player.state.duration || 1;
+    lastUpdatedTimeRef.current = currentTime;
+    updateVideoProgress(videoId, currentTime, duration);
+  }, [videoId, updateVideoProgress]);
+
   const handleTimeUpdate = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
@@ -352,18 +361,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const currentTime = player.state.currentTime;
     const duration = player.state.duration || 1;
 
-    // Throttle updates to every ~1 second to prevent excessive React re-renders and localStorage writes
-    if (Math.abs(currentTime - lastUpdatedTimeRef.current) > 1) {
+    // Throttle updates to every ~5 seconds to prevent excessive React re-renders and localStorage writes
+    if (Math.abs(currentTime - lastUpdatedTimeRef.current) > 5) {
       lastUpdatedTimeRef.current = currentTime;
       updateVideoProgress(videoId, currentTime, duration);
     }
   }, [videoId, updateVideoProgress]);
 
+  const handlePause = useCallback(() => {
+    saveCurrentProgress();
+  }, [saveCurrentProgress]);
+
+  useEffect(() => {
+    return () => {
+      saveCurrentProgress();
+    };
+  }, [saveCurrentProgress]);
+
   const handleEnded = useCallback(() => {
+    saveCurrentProgress();
     if (autoplay && onNext) {
       onNext();
     }
-  }, [autoplay, onNext]);
+  }, [autoplay, onNext, saveCurrentProgress]);
 
   return (
     <Box
@@ -403,6 +423,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           onTimeUpdate={handleTimeUpdate}
           onCanPlay={onCanPlay}
           onPlaying={handlePlaying}
+          onPause={handlePause}
           onEnded={handleEnded}
           autoPlay={autoplay}
           style={{ width: "100%", height: "100%", outline: "none" }}
@@ -484,7 +505,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {title}
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", gap: 1, ml: { xs: 0, md: 2 }, flexWrap: "wrap", alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: { xs: 0.5, sm: 1 },
+            ml: { xs: 0, md: 2 },
+            flexWrap: "nowrap",
+            alignItems: "center",
+            overflow: "visible",
+            "& > *": {
+              flexShrink: 0,
+            },
+            width: { xs: "100%", md: "auto" },
+          }}
+        >
           {/* Bookmarks */}
           {onAddBookmark && onRemoveBookmark && (
             <BookmarksPanel

@@ -62,6 +62,10 @@ const VideoListItem = React.memo(
       <ListItem
         id={`video-list-item-${video.id}`}
         disablePadding
+        sx={{
+          contentVisibility: "auto",
+          containIntrinsicSize: "0 50px",
+        }}
         secondaryAction={
           isCompleted ? (
             <Tooltip title="Mark as unread">

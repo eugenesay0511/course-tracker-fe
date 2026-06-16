@@ -42,6 +42,8 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import {
   Settings as SettingsIcon,
   BookmarkBorder as BookmarkIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from "@mui/icons-material";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
@@ -54,7 +56,8 @@ import {
   performMigrationAtom,
   loadCourseDataAtom,
 } from "./store";
-import { getStoredHandle } from "./utils/idb";
+import { getStoredHandle, db } from "./utils/idb";
+import { useLiveQuery } from "dexie-react-hooks";
 
 function Navigation() {
   const navigate = useNavigate();
@@ -122,6 +125,22 @@ function AppContent() {
   const hasData = activeCourseId && courseData && courseData.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
   const isSettingsOpen = searchParams.get("settings") === "true";
+  const [mode, setMode] = useAtom(themeModeAtom);
+
+  const toggleTheme = () => setMode((prev) => (prev === "dark" ? "light" : "dark"));
+
+  const activeCourse = useLiveQuery(
+    async () => (activeCourseId ? db.courses.get(activeCourseId) : null),
+    [activeCourseId]
+  );
+
+  useEffect(() => {
+    if (activeCourse?.name) {
+      document.title = `${activeCourse.name} - WatchFlow`;
+    } else {
+      document.title = "WatchFlow";
+    }
+  }, [activeCourse]);
 
   if (!isStoreLoaded) {
     return (
@@ -192,6 +211,11 @@ function AppContent() {
 
             {/* Actions */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Tooltip title="Toggle Theme">
+                <IconButton color="inherit" onClick={toggleTheme} size="small">
+                  {mode === "dark" ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Library">
                 <IconButton
                   color="inherit"
@@ -300,6 +324,11 @@ function AppContent() {
               Library
             </Button>
             {hasData && <SearchBar />}
+            <Tooltip title="Toggle Theme">
+              <IconButton color="inherit" onClick={toggleTheme} sx={{ mr: 1 }}>
+                {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Settings">
               <IconButton
                 color="inherit"

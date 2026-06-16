@@ -13,13 +13,9 @@ import {
   CheckCircle as SuccessIcon,
   Settings as SettingsIcon,
   Close as CloseIcon,
-  Palette as ThemeIcon,
-  LightMode as LightIcon,
-  DarkMode as DarkIcon,
 } from "@mui/icons-material";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
-  themeModeAtom,
   settingsAtom,
   dailyGoalMinutesAtom,
   clearProgressAtom,
@@ -35,7 +31,6 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
   onClose,
 }) => {
   const settings = useAtomValue(settingsAtom);
-  const [mode, setMode] = useAtom(themeModeAtom);
   const setDailyGoal = useSetAtom(dailyGoalMinutesAtom);
   const clearProgressFn = useSetAtom(clearProgressAtom);
   const importProgressFn = useSetAtom(importProgressAtom);
@@ -179,76 +174,6 @@ export const Settings: React.FC<{ open: boolean; onClose: () => void }> = ({
 
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ p: { xs: 3, sm: 4 } }}>
-          {/* Group 0: Appearance (Theme) */}
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <ThemeIcon color="primary" />
-              <Typography variant="h6" fontWeight="bold">
-                Appearance
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                p: 2.5,
-                borderRadius: 3,
-                bgcolor: "background.default",
-                border: "1px solid",
-                borderColor: "divider",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Box>
-                <Typography variant="body2" fontWeight={700}>
-                  Theme Mode
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Choose between light and dark interface
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  p: 0.5,
-                  borderRadius: "100px",
-                  bgcolor: (theme) =>
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.05)"
-                      : "rgba(0,0,0,0.03)",
-                }}
-              >
-                <IconButton
-                  onClick={() => setMode("light")}
-                  sx={{
-                    borderRadius: "100px",
-                    px: 2,
-                    bgcolor: mode === "light" ? "white" : "transparent",
-                    color: mode === "light" ? "primary.main" : "text.secondary",
-                    boxShadow: mode === "light" ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
-                    "&:hover": { bgcolor: mode === "light" ? "white" : "action.hover" },
-                  }}
-                >
-                  <LightIcon sx={{ mr: 1, fontSize: 18 }} />
-                  <Typography variant="caption" fontWeight={700}>Light</Typography>
-                </IconButton>
-                <IconButton
-                  onClick={() => setMode("dark")}
-                  sx={{
-                    borderRadius: "100px",
-                    px: 2,
-                    bgcolor: mode === "dark" ? "primary.main" : "transparent",
-                    color: mode === "dark" ? "white" : "text.secondary",
-                    boxShadow: mode === "dark" ? "0 4px 12px rgba(59, 130, 246, 0.4)" : "none",
-                    "&:hover": { bgcolor: mode === "dark" ? "primary.main" : "action.hover" },
-                  }}
-                >
-                  <DarkIcon sx={{ mr: 1, fontSize: 18 }} />
-                  <Typography variant="caption" fontWeight={700}>Dark</Typography>
-                </IconButton>
-              </Box>
-            </Box>
-          </Box>
 
           {/* Group 1: Daily Goal */}
           <StudyGoalSettings settings={settings} setDailyGoal={setDailyGoal} />

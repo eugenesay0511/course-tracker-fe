@@ -306,13 +306,16 @@ export const CoursePlayer: React.FC = () => {
       : null;
   const prevVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
 
-  // Prefetch next/prev video blob URLs for instant switching
+  // Prefetch next/prev video & subtitle blob URLs for instant switching
   useEffect(() => {
     if (!rootHandle || permissionStatus !== "granted") return;
     const toPrefetch = [nextVideo, prevVideo].filter(Boolean);
     for (const v of toPrefetch) {
       if (v?.path && !blobCacheRef.current.has(v.path)) {
         resolveFile(v.path).catch(() => {});
+      }
+      if (v?.srtPath && !blobCacheRef.current.has(v.srtPath)) {
+        resolveFile(v.srtPath).catch(() => {});
       }
     }
   }, [nextVideo, prevVideo, rootHandle, permissionStatus, resolveFile]);
