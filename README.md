@@ -12,7 +12,8 @@ WatchFlow is a premium, **local-first** web application designed to help you org
 - **🔖 Bookmarks & Notes**: Save critical moments with a single keystroke (**'B'**). Add notes to bookmarks and jump back to exact timestamps instantly.
 - **🎯 Smart Progress Tracking**: Videos are automatically marked as "Completed" once you reach 95% duration. A high-performance "Smart Resume" feature ensures you always pick up exactly where you left off.
 - **⚡ High-Performance Player**: Powered by **Vidstack**, the player supports persistent playback speeds (0.5x–2.1x), automatic resuming, and gapless navigation.
-- **🌗 Luxury UI**: A fully responsive, premium design with seamless Light and Dark mode transitions, glassmorphic effects, and customizable layouts (Course Outline on left or right).
+- **🌗 Luxury UI**: A fully responsive, premium design with a quick theme toggle in the header, glassmorphic effects, and customizable layouts (Course Outline on left or right).
+- **📌 Dynamic Tab Titles**: The browser tab title automatically updates to show the name of your currently selected course.
 
 ## 🧠 Technical Excellence (Project Architecture)
 
@@ -35,9 +36,9 @@ _Detailed architecture can be found in [docs/architecture-details.md](./docs/arc
 
 ### 4. Performance Optimizations
 
-- **Throttled Updates**: Video progress updates are throttled to once per second to reduce CPU overhead.
-- **Prefetching**: WatchFlow intelligently prefetches the next video in your course for instant, zero-buffering transitions.
-- **Virtualization**: The course outline and dashboard grids are optimized to handle massive courses with hundreds of videos without dropping a frame.
+- **Throttled Updates**: Video progress updates are throttled to once every 5 seconds (with immediate persistence on pause, ended, or page unmount), reducing IndexedDB write frequency by 80% while preserving accuracy.
+- **Prefetching**: WatchFlow intelligently prefetches both the next/prev video files and their subtitle `.srt` tracks to ensure instant, gapless transitions.
+- **Virtualization**: The course outline utilizes native browser virtualization (`content-visibility: auto` and `contain-intrinsic-size`) to handle massive playlists with hundreds of video nodes without performance degradation.
 
 ## ⌨️ Keyboard Shortcuts
 

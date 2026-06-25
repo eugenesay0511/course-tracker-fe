@@ -65,6 +65,10 @@ function Navigation() {
   const activeCourseId = useAtomValue(activeCourseIdAtom);
   const isLibrary = !activeCourseId;
 
+  if (isLibrary) {
+    return null;
+  }
+
   const btnStyle = (isActive: boolean) => (theme: any) => ({
     borderRadius: 2,
     px: 2,
@@ -89,8 +93,7 @@ function Navigation() {
         color="inherit"
         startIcon={<DashboardIcon />}
         onClick={() => navigate("/")}
-        disabled={isLibrary}
-        sx={btnStyle(!isLibrary && location.pathname === "/")}
+        sx={btnStyle(location.pathname === "/")}
       >
         Dashboard
       </Button>
@@ -98,8 +101,7 @@ function Navigation() {
         color="inherit"
         startIcon={<PlayCourseIcon />}
         onClick={() => navigate("/course")}
-        disabled={isLibrary}
-        sx={btnStyle(!isLibrary && location.pathname === "/course")}
+        sx={btnStyle(location.pathname === "/course")}
       >
         Player
       </Button>
@@ -107,8 +109,7 @@ function Navigation() {
         color="inherit"
         startIcon={<BookmarkIcon />}
         onClick={() => navigate("/bookmarks")}
-        disabled={isLibrary}
-        sx={btnStyle(!isLibrary && location.pathname === "/bookmarks")}
+        sx={btnStyle(location.pathname === "/bookmarks")}
       >
         Bookmarks
       </Button>

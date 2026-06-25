@@ -16,6 +16,7 @@ import {
   Checkbox,
   Alert,
   Stack,
+  Popover,
 } from "@mui/material";
 import {
   FolderOpen as FolderIcon,
@@ -29,6 +30,7 @@ import {
   Palette as CustomIcon,
   FormatColorReset as ResetIcon,
   Tune as SettingsIcon,
+  HelpOutline as HelpIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
@@ -67,6 +69,17 @@ export const WelcomeScreen: React.FC = () => {
   const [browserError, setBrowserError] = useState(false);
   const [invalidCourseIds, setInvalidCourseIds] = useState<Set<string>>(new Set());
   const [activeColorCourseId, setActiveColorCourseId] = useState<string | null>(null);
+  const [guideAnchorEl, setGuideAnchorEl] = useState<HTMLButtonElement | null>(null);
+
+  const handleGuideOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setGuideAnchorEl(event.currentTarget);
+  };
+
+  const handleGuideClose = () => {
+    setGuideAnchorEl(null);
+  };
+
+  const isGuideOpen = Boolean(guideAnchorEl);
 
   const courses = useLiveQuery(() => db.courses.orderBy("lastAccessed").reverse().toArray());
 
@@ -188,14 +201,90 @@ export const WelcomeScreen: React.FC = () => {
               Library
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleSelectFolder}
-            sx={{ borderRadius: 3, px: 3, fontWeight: 700 }}
+          <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<HelpIcon />}
+              onClick={handleGuideOpen}
+              sx={{ borderRadius: 3, px: 2.5, fontWeight: 700, borderColor: "divider" }}
+            >
+              Structure Guide
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleSelectFolder}
+              sx={{ borderRadius: 3, px: 3, fontWeight: 700 }}
+            >
+              Add New Course
+            </Button>
+          </Box>
+
+          <Popover
+            open={isGuideOpen}
+            anchorEl={guideAnchorEl}
+            onClose={handleGuideClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+            PaperProps={{
+              sx: {
+                p: 3,
+                width: 340,
+                borderRadius: 4,
+                boxShadow: "0 12px 36px rgba(0,0,0,0.15)",
+                border: "1px solid",
+                borderColor: "divider",
+              },
+            }}
           >
-            Add New Course
-          </Button>
+            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+              <FolderIcon color="primary" fontSize="small" /> Folder Structure Guide
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Organize your course folders like this to automatically generate chapters and playlists:
+            </Typography>
+            
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(15, 23, 42, 0.6)"
+                    : "rgba(248, 250, 252, 0.8)",
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                fontSize: "0.85rem",
+                lineHeight: 1.6,
+                borderStyle: "dashed",
+              }}
+            >
+              <Box sx={{ color: "primary.main", fontWeight: 700 }}>
+                Course Root Folder/
+              </Box>
+              <Box sx={{ pl: 2 }}>
+                <Box>├── 01 Introduction/</Box>
+                <Box sx={{ pl: 2, color: "text.secondary" }}>
+                  <Box>├── Welcome.mp4</Box>
+                  <Box>├── Welcome.srt (optional subtitles)</Box>
+                  <Box>└── Overview.mp4</Box>
+                </Box>
+                <Box>├── 02 Deep Dive/</Box>
+                <Box sx={{ pl: 2, color: "text.secondary" }}>
+                  <Box>├── Setup.mp4</Box>
+                  <Box>├── Setup.vtt (optional subtitles)</Box>
+                  <Box>└── Lesson_1.mp4</Box>
+                </Box>
+              </Box>
+            </Paper>
+          </Popover>
         </Box>
 
         <Grid container spacing={3}>
@@ -661,8 +750,13 @@ export const WelcomeScreen: React.FC = () => {
                   <Box>├── 01 Introduction/</Box>
                   <Box sx={{ pl: 2, color: "text.secondary" }}>
                     <Box>├── Welcome.mp4</Box>
+                    <Box>├── Welcome.srt (optional subtitles)</Box>
                   </Box>
                   <Box>├── 02 Basics/</Box>
+                  <Box sx={{ pl: 2, color: "text.secondary" }}>
+                    <Box>├── Lesson_1.mp4</Box>
+                    <Box>└── Lesson_1.vtt (optional subtitles)</Box>
+                  </Box>
                 </Box>
               </Paper>
             </Fade>
