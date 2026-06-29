@@ -63,11 +63,12 @@ export const StudyStreakCard: React.FC = () => {
   // We leave 40px on the left for weekday labels (Sun, Mon, Tue...).
   const { heatmapData, startDate, svgWidth, daysCount } = useMemo(() => {
     const labelOffset = 40;
+    const rightMargin = 20;
     const colWidth = 18;
-    const availableWidth = Math.max(150, containerWidth - labelOffset);
+    const availableWidth = Math.max(150, containerWidth - labelOffset - rightMargin);
     const columnsCount = Math.floor(availableWidth / colWidth);
     const days = Math.max(7, columnsCount * 7);
-    const calculatedWidth = columnsCount * colWidth + labelOffset;
+    const calculatedWidth = columnsCount * colWidth + labelOffset + rightMargin;
 
     const data: { date: string; count: number; seconds: number }[] = [];
     const now = new Date();
