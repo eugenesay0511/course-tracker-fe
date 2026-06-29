@@ -244,6 +244,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // If an initial seek time is specified (e.g. from a bookmark click), use it
       if (initialSeekTime !== undefined && initialSeekTime > 0) {
         player.currentTime = initialSeekTime;
+        lastUpdatedTimeRef.current = initialSeekTime;
       } else {
         const savedProgress = getProgress(videoId);
         if (savedProgress && savedProgress.currentTime > 0) {
@@ -251,9 +252,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             savedProgress.currentTime / (savedProgress.duration || 1);
           if (percent < 0.99) {
             player.currentTime = savedProgress.currentTime;
+            lastUpdatedTimeRef.current = savedProgress.currentTime;
           } else {
             player.currentTime = 0;
+            lastUpdatedTimeRef.current = 0;
+            updateVideoProgress(videoId, 0, savedProgress.duration || 1);
           }
+        } else {
+          lastUpdatedTimeRef.current = 0;
         }
       }
       playedInitialResumeRef.current = true;

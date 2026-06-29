@@ -321,7 +321,7 @@ export const updateVideoProgress = async ({
 
   const delta = currentTime - (prevVideo?.currentTime || 0);
 
-  if (delta > 0 && delta < 5) {
+  if (delta > 0 && delta < 15) {
     const today = getTodayKey();
     let todayLog = await db.dailyLogs.get(today);
     if (todayLog) {

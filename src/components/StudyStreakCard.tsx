@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -6,6 +6,7 @@ import {
   Box,
   LinearProgress,
   Tooltip,
+  useTheme,
 } from "@mui/material";
 import {
   LocalFireDepartment as FireIcon,
@@ -20,6 +21,7 @@ import {
   getTodayKey,
   getStreakDays,
 } from "../utils/formatters";
+import HeatMap from "@uiw/react-heat-map";
 
 export const StudyStreakCard: React.FC = () => {
   const dailyGoal = useAtomValue(dailyGoalMinutesAtom) || 30;
@@ -38,35 +40,81 @@ export const StudyStreakCard: React.FC = () => {
   const todayPercent = Math.min(100, (todaySeconds / (dailyGoal * 60)) * 100);
   const goalReached = todayPercent >= 100;
 
-  // Last 7 days data
-  const last7Days = useMemo(() => {
-    const days: {
-      key: string;
-      label: string;
-      seconds: number;
-      met: boolean;
-    }[] = [];
-    const d = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const dd = new Date(d);
-      dd.setDate(dd.getDate() - i);
-      const key = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
-      const entry = log.find((e) => e.date === key);
-      const secs = entry?.watchedSeconds || 0;
-      days.push({
-        key,
-        label: dd.toLocaleDateString(undefined, { weekday: "short" }),
-        seconds: secs,
-        met: secs >= dailyGoal * 60,
-      });
-    }
-    return days;
-  }, [log, dailyGoal]);
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
 
-  const maxSecondsInWeek = Math.max(
-    dailyGoal * 60,
-    ...last7Days.map((d) => d.seconds),
-  );
+  // Dynamic width tracking
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(320);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Calculate grid size based on container width:
+  // Each week column is (rectSize + space) = 15 + 3 = 18px wide.
+  // We leave 40px on the left for weekday labels (Sun, Mon, Tue...).
+  const { heatmapData, startDate, svgWidth, daysCount } = useMemo(() => {
+    const labelOffset = 40;
+    const colWidth = 18;
+    const availableWidth = Math.max(150, containerWidth - labelOffset);
+    const columnsCount = Math.floor(availableWidth / colWidth);
+    const days = Math.max(7, columnsCount * 7);
+    const calculatedWidth = columnsCount * colWidth + labelOffset;
+
+    const data: { date: string; count: number; seconds: number }[] = [];
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - days);
+
+    const logMap = new Map(log.map((e) => [e.date, e.watchedSeconds]));
+
+    for (let i = days; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const heatKey = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+
+      const seconds = logMap.get(key) || 0;
+
+      if (seconds > 0) {
+        const percent = seconds / (dailyGoal * 60);
+        let level = 1;
+        if (percent >= 1.0) level = 4;
+        else if (percent >= 0.5) level = 3;
+        else if (percent >= 0.25) level = 2;
+
+        data.push({
+          date: heatKey,
+          count: level,
+          seconds: seconds,
+        });
+      }
+    }
+
+    return {
+      heatmapData: data,
+      startDate: start,
+      svgWidth: calculatedWidth,
+      daysCount: days,
+    };
+  }, [log, dailyGoal, containerWidth]);
+
+  const colors = useMemo(() => {
+    return {
+      1: "#d1fae5", // Lightest emerald
+      2: "#a7f3d0", // Light emerald
+      3: "#34d399", // Medium emerald
+      4: "#059669", // Dark rich emerald
+    };
+  }, []);
 
   const getMotivation = () => {
     if (goalReached && streak >= 7) return "🏆 Incredible! A full week streak!";
@@ -80,22 +128,20 @@ export const StudyStreakCard: React.FC = () => {
 
   return (
     <Card
-      sx={(theme) => ({
+      sx={{
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        background:
-          theme.palette.mode === "dark"
-            ? "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)"
-            : "#ffffff",
+        background: isDarkMode
+          ? "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)"
+          : "#ffffff",
         border: 1,
         borderColor: "divider",
-        boxShadow:
-          theme.palette.mode === "dark"
-            ? "0 10px 40px -10px rgba(0,0,0,0.5)"
-            : "0 10px 40px -10px rgba(0,0,0,0.08)",
+        boxShadow: isDarkMode
+          ? "0 10px 40px -10px rgba(0,0,0,0.5)"
+          : "0 10px 40px -10px rgba(0,0,0,0.08)",
         borderRadius: 4,
-      })}
+      }}
     >
       <CardContent
         sx={{
@@ -217,8 +263,8 @@ export const StudyStreakCard: React.FC = () => {
             />
           </Box>
 
-          {/* Last 7 Days Mini Chart */}
-          <Box>
+          {/* Study Heat Map */}
+          <Box ref={containerRef}>
             <Typography
               variant="caption"
               color="text.secondary"
@@ -230,69 +276,66 @@ export const StudyStreakCard: React.FC = () => {
                 letterSpacing: 0.5,
               }}
             >
-              Last 7 Days
+              Last {Math.round(daysCount / 30)} Months
             </Typography>
             <Box
               sx={{
+                width: "100%",
+                mt: 1,
+                pb: 1,
                 display: "flex",
-                gap: 1,
-                alignItems: "flex-end",
-                height: 60,
-                mb: 1,
+                justifyContent: "flex-start",
+                "--rhm-rect-bg": isDarkMode ? "#243042" : "#e2e8f0",
+                "& .w-heat-map": {
+                  width: "100% !important",
+                },
+                "& svg": {
+                  width: "100% !important",
+                  height: "auto !important",
+                },
+                "& .w-heat-map text, & svg text, & text": {
+                  fill: `${isDarkMode ? "#cbd5e1" : "#475569"} !important`, // Slate text colors visible in dark/light modes
+                  fontWeight: "500 !important",
+                },
+                "& svg rect[fill='#ebedf0'], & svg rect[fill='#EBEDF0'], & svg rect[fill*='ebedf0'], & svg rect[fill*='EBEDF0']":
+                  {
+                    fill: `${isDarkMode ? "#243042" : "#e2e8f0"} !important`,
+                  },
               }}
             >
-              {last7Days.map((day) => {
-                const height =
-                  maxSecondsInWeek > 0
-                    ? Math.max(4, (day.seconds / maxSecondsInWeek) * 40)
-                    : 4;
-                return (
-                  <Tooltip
-                    key={day.key}
-                    title={formatDuration(day.seconds)}
-                    arrow
-                    placement="top"
-                  >
-                    <Box
-                      sx={{
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 0.5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: `${height}px`,
-                          borderRadius: 1,
-                          bgcolor: day.met
-                            ? "#10b981"
-                            : day.seconds > 0
-                              ? "primary.main"
-                              : "action.hover",
-                          transition: "height 0.3s ease",
-                          opacity: day.met ? 1 : 0.6,
-                        }}
-                      />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: "0.6rem",
-                          color:
-                            day.key === today
-                              ? "primary.main"
-                              : "text.disabled",
-                          fontWeight: day.key === today ? 800 : 500,
-                        }}
+              <Box sx={{ width: "100%" }}>
+                <HeatMap
+                  value={heatmapData}
+                  startDate={startDate}
+                  endDate={new Date()}
+                  rectSize={15}
+                  space={3}
+                  width={svgWidth}
+                  panelColors={colors}
+                  legendCellSize={0}
+                  rectProps={{ rx: 2, ry: 2 }}
+                  style={
+                    {
+                      "--rhm-rect-bg": isDarkMode ? "#243042" : "#e2e8f0",
+                    } as React.CSSProperties
+                  }
+                  rectRender={(props, data) => {
+                    if (!data || !data.date) return <rect {...props} />;
+                    const seconds = (data as any).seconds || 0;
+                    const tooltipText = `${data.date}: ${formatDuration(seconds)} / ${dailyGoal}m`;
+                    return (
+                      <Tooltip
+                        title={tooltipText}
+                        key={data.date}
+                        arrow
+                        placement="top"
                       >
-                        {day.label}
-                      </Typography>
-                    </Box>
-                  </Tooltip>
-                );
-              })}
+                        <rect {...props} />
+                      </Tooltip>
+                    );
+                  }}
+                />
+              </Box>
             </Box>
 
             {/* Motivation message */}
@@ -302,7 +345,7 @@ export const StudyStreakCard: React.FC = () => {
               sx={{
                 fontWeight: 600,
                 color: goalReached ? "success.main" : "text.secondary",
-                mt: 1,
+                mt: 2,
               }}
             >
               {getMotivation()}
